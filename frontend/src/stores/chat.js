@@ -11,7 +11,7 @@ function genId() {
 }
 
 // ── AES-GCM 加解密（Web Crypto API，防同机脚本直接读明文） ──
-const ENC_KEY = new TextEncoder().encode('daomind-local-enc-key-32byte')
+const ENC_KEY = new TextEncoder().encode('daomind-local-enc-key-32bytes!')
 
 async function _encrypt(text) {
   const key = await crypto.subtle.importKey('raw', ENC_KEY, { name: 'AES-GCM' }, false, ['encrypt'])

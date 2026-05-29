@@ -29,7 +29,7 @@ class ProviderSettings(BaseModel):
 
 class EmbeddingSettings(BaseModel):
     base_url: str
-    api_key: str
+    api_key: Optional[str] = ""
     model: str = "embedding-3"
 
 

@@ -405,14 +405,14 @@ async function handleSave() {
           }
         }
       }
-      // 只发送用户实际填写的 key（空串表示未修改）
-      const keyToSend = p.api_key || undefined
+      // 空串表示未修改，后端用旧 key
+      const keyToSend = p.api_key || ''
       return { name: p.name || '自定义', base_url: p.base_url, api_key: keyToSend, auth_type: p.auth_type || 'bearer', models }
     }).filter(p => p.base_url)
 
     const embedding = {
       base_url: embeddingForm.value.base_url,
-      api_key: embeddingForm.value.api_key || undefined,
+      api_key: embeddingForm.value.api_key || '',
       model: embeddingForm.value.model,
     }
 
