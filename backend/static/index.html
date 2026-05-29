@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>道心 · Dao-Mind</title>
+  <script>
+    // 主题初始化 — 在渲染前执行，避免闪烁
+    (function(){
+      var t = localStorage.getItem('daomind-theme');
+      if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
+  <style>
+    /* 字体预加载：Noto Serif SC 从 Google Fonts，国内 fallback 用思源宋体 */
+    @font-face {
+      font-family: 'Noto Serif SC';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: local('Noto Serif SC'), local('Noto Serif CJK SC'),
+           local('Source Han Serif SC'), local('Source Han Serif CN'),
+           local('SimSun'), local('宋体');
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-CnpRgv-G.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DKBPvox0.css">
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>

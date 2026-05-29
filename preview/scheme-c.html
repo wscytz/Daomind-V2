@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>道心 · 方案 C — 竹简</title>
+<link href="https://fonts.googleapis.com/css2?family=Long+Cang&family=Noto+Serif+SC:wght@200;300;400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --parchment:#f2ead8;
+  --parchment-light:#f8f3e6;
+  --parchment-dark:#e8dfc8;
+  --ink-black:#1a1610;
+  --ink-brown:#3a3225;
+  --ink-medium:#5a5040;
+  --ink-light:#8a7e68;
+  --ink-faint:#b8ad96;
+  --bamboo:#8a7542;
+  --bamboo-dim:#6a5830;
+  --bamboo-bg:rgba(138,117,66,0.06);
+  --seal-red:#b44a3a;
+  --seal-bg:rgba(180,74,58,0.06);
+  --jade-green:#5a7a5e;
+  --jade-bg:rgba(90,122,94,0.06);
+  --indigo:#4a5a80;
+  --indigo-bg:rgba(74,90,128,0.06);
+  --card:#fffdf6;
+  --divider:rgba(0,0,0,0.05);
+  --font-brush:'Long Cang','Noto Serif SC',serif;
+  --font-body:'Noto Serif SC',Georgia,serif;
+  --font-sans:'Noto Sans SC',-apple-system,sans-serif;
+  --r:8px;
+}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);background:var(--parchment);color:var(--ink-brown);height:100vh;overflow:hidden}
+::selection{background:var(--bamboo);color:white}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.08);border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ═════ LAYOUT ═════ */
+.app{display:flex;height:100vh}
+.sidebar{
+  width:250px;min-width:250px;background:var(--parchment-dark);
+  border-right:1px solid var(--divider);display:flex;flex-direction:column;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(0,0,0,0.012) 28px,rgba(0,0,0,0.012) 29px);
+}
+.sb-brand{padding:24px 20px 18px;border-bottom:1px solid var(--divider)}
+.sb-brand-zh{
+  font-family:var(--font-brush);font-size:28px;
+  color:var(--ink-black);letter-spacing:6px;
+}
+.sb-brand-en{
+  font-family:var(--font-sans);font-size:8px;color:var(--ink-faint);
+  letter-spacing:4px;margin-top:2px;
+}
+.sb-body{flex:1;padding:14px 18px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+.sb-label{
+  font-family:var(--font-sans);font-size:9px;color:var(--ink-faint);
+  letter-spacing:3px;margin-bottom:5px;font-weight:500;
+}
+.sb-persona{display:flex;flex-direction:column;gap:1px}
+.sb-persona-btn{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border:none;border-radius:var(--r);
+  background:transparent;font-family:var(--font-body);
+  font-size:13px;color:var(--ink-medium);cursor:pointer;
+  transition:all .15s;text-align:left;width:100%;
+}
+.sb-persona-btn:hover{background:rgba(0,0,0,0.02)}
+.sb-persona-btn.active{
+  background:var(--card);color:var(--ink-black);font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+}
+.sb-persona-icon{
+  width:26px;height:26px;border-radius:5px;
+  background:var(--parchment);display:flex;
+  align-items:center;justify-content:center;
+  font-size:11px;color:var(--ink-faint);
+}
+.sb-persona-btn.active .sb-persona-icon{background:var(--bamboo-bg);color:var(--bamboo)}
+.sb-depth{display:flex;gap:2px}
+.sb-depth-btn{
+  flex:1;padding:5px 0;border:1px solid rgba(0,0,0,0.08);
+  border-radius:4px;background:transparent;
+  font-family:var(--font-sans);font-size:11px;
+  color:var(--ink-light);cursor:pointer;transition:all .15s;
+}
+.sb-depth-btn.active{
+  background:var(--bamboo);color:white;
+  border-color:var(--bamboo);font-weight:500;
+}
+.sb-select{
+  width:100%;padding:6px 10px;border:1px solid rgba(0,0,0,0.08);
+  border-radius:4px;font-family:var(--font-sans);font-size:11px;
+  color:var(--ink-medium);background:var(--card);outline:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23b8ad96' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
+.sb-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;border:1px solid rgba(0,0,0,0.08);
+  border-radius:var(--r);cursor:pointer;transition:all .15s;
+}
+.sb-toggle:hover{border-color:var(--ink-faint)}
+.sb-toggle.on{border-color:var(--bamboo-dim);background:var(--bamboo-bg)}
+.sb-toggle-label{font-family:var(--font-sans);font-size:12px;color:var(--ink-medium)}
+.sb-toggle.on .sb-toggle-label{color:var(--bamboo);font-weight:500}
+.sb-toggle-track{
+  width:28px;height:15px;border-radius:8px;
+  background:var(--ink-faint);position:relative;transition:background .2s;
+  opacity:.5;
+}
+.sb-toggle.on .sb-toggle-track{background:var(--bamboo);opacity:1}
+.sb-toggle-track::after{
+  content:'';position:absolute;width:11px;height:11px;
+  border-radius:50%;background:white;top:2px;left:2px;
+  transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,0.1);
+}
+.sb-toggle.on .sb-toggle-track::after{transform:translateX(13px)}
+.sb-footer{
+  padding:10px 18px;border-top:1px solid var(--divider);
+  display:flex;gap:4px;
+}
+.sb-footer-btn{
+  flex:1;padding:5px;border:1px solid rgba(0,0,0,0.06);
+  border-radius:4px;background:none;
+  font-family:var(--font-sans);font-size:10px;
+  color:var(--ink-faint);cursor:pointer;transition:all .15s;
+}
+.sb-footer-btn:hover{color:var(--ink-light);border-color:var(--ink-faint)}
+
+/* ═══ CHAT ═══ */
+.chat{flex:1;display:flex;flex-direction:column;min-width:0}
+.chat-top{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 28px;min-height:42px;border-bottom:1px solid var(--divider);
+  background:rgba(242,234,216,0.8);backdrop-filter:blur(12px);
+}
+.chat-top-title{font-size:13px;color:var(--ink-medium);letter-spacing:1px}
+.chat-chips{display:flex;gap:4px}
+.chip{
+  font-family:var(--font-sans);font-size:9px;padding:2px 8px;border-radius:8px;
+}
+.chip-bamboo{background:var(--bamboo-bg);color:var(--bamboo-dim)}
+.chip-jade{background:var(--jade-bg);color:var(--jade-green)}
+.icon-btn{
+  width:28px;height:28px;border:none;background:none;
+  cursor:pointer;border-radius:4px;color:var(--ink-faint);
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:all .15s;
+}
+.icon-btn:hover{background:rgba(0,0,0,0.03);color:var(--ink-light)}
+
+.msgs-wrap{flex:1;overflow-y:auto;display:flex;justify-content:center}
+.msgs{
+  width:100%;max-width:680px;padding:24px 24px 72px;
+  display:flex;flex-direction:column;gap:16px;
+}
+.empty{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:80px 24px;text-align:center;
+  animation:fadeUp .5s ease;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.empty-seal{
+  width:48px;height:48px;border:2px solid var(--seal-red);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-brush);font-size:20px;color:var(--seal-red);
+  margin-bottom:20px;opacity:.6;
+}
+.empty-title{font-size:15px;color:var(--ink-brown);letter-spacing:2px;margin-bottom:6px}
+.empty-sub{font-size:12px;color:var(--ink-faint);line-height:1.8;max-width:260px}
+
+.msg-user{display:flex;justify-content:flex-end;animation:msgIn .3s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.msg-user-inner{
+  max-width:420px;padding:10px 16px;
+  background:var(--ink-brown);color:var(--parchment-light);
+  border-radius:12px 12px 2px 12px;
+  font-size:13px;line-height:1.8;
+  white-space:pre-wrap;word-break:break-word;
+}
+.msg-ai{display:flex;justify-content:flex-start;animation:msgIn .3s ease}
+.msg-ai-inner{
+  max-width:580px;padding:14px 18px;
+  background:var(--card);
+  border:1px solid var(--divider);
+  border-radius:12px 12px 12px 2px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.02);
+}
+.msg-ai-avatar{
+  font-family:var(--font-sans);font-size:10px;
+  color:var(--bamboo);margin-bottom:6px;
+  display:flex;align-items:center;gap:4px;
+}
+.msg-ai-avatar::before{
+  content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--bamboo);
+}
+.msg-ai-content{font-size:13.5px;line-height:1.9}
+.msg-ai-content p{margin:0 0 8px}
+.msg-ai-content p:last-child{margin:0}
+.msg-ai-content strong{color:var(--bamboo)}
+.msg-ai-footer{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+.msg-time{font-size:9px;color:var(--ink-faint)}
+.msg-sources{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+.source-tag{
+  font-family:var(--font-sans);font-size:9px;
+  padding:1px 8px;border-radius:8px;
+  background:var(--jade-bg);color:var(--jade-green);
+}
+
+.input-area{
+  padding:8px 24px 14px;display:flex;justify-content:center;
+  background:linear-gradient(to top,var(--parchment) 50%,transparent);
+}
+.input-row{width:100%;max-width:680px;display:flex;gap:6px;align-items:flex-end}
+.input-field{
+  flex:1;padding:10px 18px;border:1.5px solid rgba(0,0,0,0.06);
+  border-radius:20px;font-family:var(--font-body);font-size:13px;
+  color:var(--ink-black);background:var(--card);outline:none;
+  transition:border-color .2s;
+}
+.input-field::placeholder{color:var(--ink-faint)}
+.input-field:focus{border-color:var(--bamboo)}
+.send-btn{
+  width:38px;height:38px;border-radius:50%;border:none;
+  background:var(--bamboo);color:white;cursor:pointer;
+  font-size:16px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;transition:all .15s;
+}
+.send-btn:hover{background:var(--bamboo-dim);transform:scale(1.05)}
+
+/* ═══ SETTINGS ═══ */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(26,22,16,0.25);
+  z-index:100;display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .2s;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{
+  width:480px;max-width:92vw;max-height:82vh;
+  background:var(--card);border-radius:12px;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,0.1);
+  animation:modalIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+.modal-head{
+  padding:16px 24px 12px;border-bottom:1px solid var(--divider);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.modal-title{font-size:14px;color:var(--ink-black);letter-spacing:1px}
+.modal-close{
+  width:24px;height:24px;border:none;background:none;
+  cursor:pointer;color:var(--ink-faint);font-size:16px;
+  border-radius:4px;display:flex;align-items:center;
+}
+.modal-close:hover{background:rgba(0,0,0,0.03)}
+.modal-body{padding:16px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.provider-card{
+  background:var(--parchment);border:1px solid var(--divider);
+  border-radius:var(--r);padding:10px 12px;display:flex;flex-direction:column;gap:5px;
+}
+.provider-card-title{
+  font-family:var(--font-sans);font-size:11px;font-weight:600;
+  color:var(--bamboo);letter-spacing:.5px;
+}
+.field-label{font-family:var(--font-sans);font-size:9px;color:var(--ink-faint);letter-spacing:1px;margin-bottom:1px}
+.field-input{
+  width:100%;padding:6px 10px;border:1px solid rgba(0,0,0,0.06);
+  border-radius:4px;font-family:Consolas,monospace;font-size:11px;
+  color:var(--ink-medium);background:white;outline:none;
+  transition:border-color .15s;
+}
+.field-input:focus{border-color:var(--bamboo)}
+.field-input::placeholder{color:var(--ink-faint)}
+.key-row{display:flex;gap:3px}
+.key-row .field-input{flex:1}
+.key-toggle{
+  padding:0 8px;border:1px solid rgba(0,0,0,0.06);
+  border-radius:4px;background:white;
+  font-family:var(--font-sans);font-size:9px;
+  color:var(--ink-faint);cursor:pointer;
+}
+.key-toggle:hover{border-color:var(--ink-faint)}
+.status-bar{display:flex;align-items:center;gap:4px;padding-top:4px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--jade-green)}
+.status-text{font-family:var(--font-sans);font-size:10px;color:var(--ink-light)}
+.modal-foot{
+  padding:12px 24px;border-top:1px solid var(--divider);
+  display:flex;justify-content:flex-end;gap:6px;
+}
+.btn-cancel{
+  padding:6px 16px;border:1px solid rgba(0,0,0,0.06);
+  border-radius:4px;background:none;font-family:var(--font-sans);
+  font-size:11px;color:var(--ink-light);cursor:pointer;
+}
+.btn-save{
+  padding:6px 16px;border:none;border-radius:4px;
+  background:var(--bamboo);color:white;font-family:var(--font-sans);
+  font-size:11px;cursor:pointer;font-weight:500;transition:all .15s;
+}
+.btn-save:hover{background:var(--bamboo-dim)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-zh">道心</div>
+      <div class="sb-brand-en">DAO · MIND</div>
+    </div>
+    <div class="sb-body">
+      <div><div class="sb-label">人 格</div>
+        <div class="sb-persona">
+          <button class="sb-persona-btn active"><span class="sb-persona-icon">☯</span>道心咨询</button>
+          <button class="sb-persona-btn"><span class="sb-persona-icon">诗</span>白居易诗疗</button>
+          <button class="sb-persona-btn"><span class="sb-persona-icon">道</span>道家疗愈</button>
+        </div>
+      </div>
+      <div><div class="sb-label">深 度</div>
+        <div class="sb-depth">
+          <button class="sb-depth-btn">简短</button>
+          <button class="sb-depth-btn active">标准</button>
+          <button class="sb-depth-btn">深入</button>
+        </div>
+      </div>
+      <div><div class="sb-label">模 型</div>
+        <select class="sb-select"><option>glm-4-flash</option><option>glm-4.7</option><option>seed</option></select>
+      </div>
+      <div><div class="sb-label">经典检索</div>
+        <div class="sb-toggle on"><span class="sb-toggle-label">RAG 已开启</span><div class="sb-toggle-track"></div></div>
+      </div>
+    </div>
+    <div class="sb-footer">
+      <button class="sb-footer-btn">设置</button>
+      <button class="sb-footer-btn">清空</button>
+    </div>
+  </aside>
+  <main class="chat">
+    <div class="chat-top">
+      <span class="chat-top-title">道心咨询</span>
+      <div class="chat-chips"><span class="chip chip-bamboo">RAG</span><span class="chip chip-jade">标准</span></div>
+      <div><button class="icon-btn">⚙</button></div>
+    </div>
+    <div class="msgs-wrap"><div class="msgs">
+      <div class="empty">
+        <div class="empty-seal">道</div>
+        <div class="empty-title">道法自然，心安即归处</div>
+        <div class="empty-sub">以古人之智，解今人之忧</div>
+      </div>
+      <div class="msg-user"><div class="msg-user-inner">最近总是感到焦虑，不知道该怎么办</div></div>
+      <div class="msg-ai"><div class="msg-ai-inner">
+        <div class="msg-ai-avatar">道心</div>
+        <div class="msg-ai-content">
+          <p>焦虑如同水面泛起的涟漪，你越是想要平息它，它反而越是扩散。</p>
+          <p>《道德经》第十六章有言：<strong>「致虚极，守静笃，万物并作，吾以观复。」</strong></p>
+          <p>试着不把焦虑当作需要消灭的敌人，而是像旁观者一样，看着它来，也看着它走。</p>
+        </div>
+        <div class="msg-sources"><span class="source-tag">道德经</span></div>
+        <div class="msg-ai-footer"><span class="msg-time">15:42</span></div>
+      </div></div>
+    </div></div>
+    <div class="input-area"><div class="input-row">
+      <input class="input-field" placeholder="说点什么..." />
+      <button class="send-btn">↑</button>
+    </div></div>
+  </main>
+  <!-- SETTINGS: uncomment to preview -->
+  <!--
+  <div class="modal-bg"><div class="modal">
+    <div class="modal-head"><span class="modal-title">API 配置</span><button class="modal-close">×</button></div>
+    <div class="modal-body">
+      <div class="provider-card">
+        <div class="provider-card-title">智谱 AI</div>
+        <div><div class="field-label">接口地址</div><input class="field-input" value="https://open.bigmodel.cn/api/paas/v4" /></div>
+        <div><div class="field-label">API KEY</div><div class="key-row"><input class="field-input" type="password" value="sk-xxxx" /><button class="key-toggle">显</button></div></div>
+      </div>
+      <div class="provider-card">
+        <div class="provider-card-title">豆包 Seed</div>
+        <div><div class="field-label">接口地址</div><input class="field-input" value="https://ark.cn-beijing.volces.com/api/v3" /></div>
+        <div><div class="field-label">API KEY</div><div class="key-row"><input class="field-input" type="password" value="xxxx" /><button class="key-toggle">显</button></div></div>
+      </div>
+      <div class="provider-card">
+        <div class="provider-card-title">Embedding（RAG）</div>
+        <div><div class="field-label">接口地址</div><input class="field-input" value="https://open.bigmodel.cn/api/paas/v4" /></div>
+        <div><div class="field-label">API KEY</div><div class="key-row"><input class="field-input" type="password" value="xxxx" /><button class="key-toggle">显</button></div></div>
+        <div><div class="field-label">模型</div><input class="field-input" value="embedding-3" /></div>
+      </div>
+      <div class="status-bar"><span class="status-dot"></span><span class="status-text">服务正常</span><span class="status-text" style="color:var(--ink-faint)">| RAG 6 库 | 6 模型</span></div>
+    </div>
+    <div class="modal-foot"><button class="btn-cancel">取消</button><button class="btn-save">保存</button></div>
+  </div></div>
+  -->
+</div>
+</body>
+</html>
