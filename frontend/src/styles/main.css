@@ -169,13 +169,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   background: rgba(0,0,0,0.025);
 }
 .persona-icon {
-  width: 4px; height: 4px; border-radius: 50%;
-  background: var(--cloud); flex-shrink: 0;
-  transition: all 0.15s;
-  font-size: 0; line-height: 0;
+  width: auto; height: auto;
+  flex-shrink: 0;
+  font-size: 14px; line-height: 1;
   display: block;
 }
-.persona-btn.active .persona-icon { background: var(--gold); }
+.persona-btn.active .persona-icon { color: var(--gold-dim); }
 
 /* Depth */
 .depth-row { display: flex; gap: 2px; }

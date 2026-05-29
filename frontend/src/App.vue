@@ -120,7 +120,7 @@
         </div>
       </div>
       <ChatWindow v-if="currentPage === 'chat'" />
-      <WisdomPage v-else-if="currentPage === 'wisdom'" />
+      <WisdomPage v-else-if="currentPage === 'wisdom'" @navigate="currentPage = $event" />
     </main>
 
     <!-- Settings Modal -->

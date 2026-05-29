@@ -36,6 +36,8 @@ import { ref, onMounted } from 'vue'
 import { getWisdom } from '../api'
 import { useChatStore } from '../stores/chat'
 
+const emit = defineEmits(['navigate'])
+
 const store = useChatStore()
 const data = ref(null)
 const loading = ref(true)
@@ -56,9 +58,9 @@ function discuss() {
   const p = data.value.passage
   const text = p.original || p.content || ''
   const source = `${p.source_name}${p.chapter ? ' · ' + p.chapter : ''}`
-  // 创建新对话并发送
   store.newConversation()
   store.send(`请解读这段经典：\n\n「${text}」\n\n—— ${source}`)
+  emit('navigate', 'chat')
 }
 
 onMounted(load)

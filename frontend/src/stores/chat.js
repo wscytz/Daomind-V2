@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { sendMessage, sendRagMessage, streamChat } from '../api'
+import { sendMessage, streamChat } from '../api'
 
 const CONV_KEY = 'daomind-conversations'
 const ACTIVE_KEY = 'daomind-active-id'
