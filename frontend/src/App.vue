@@ -119,7 +119,7 @@
           <button class="settings-btn" @click="openSettings" title="设置" aria-label="打开设置">&#9881;</button>
         </div>
       </div>
-      <ChatWindow v-if="currentPage === 'chat'" :health-ok="healthOk" @open-settings="openSettings" />
+      <ChatWindow v-if="currentPage === 'chat'" />
       <WisdomPage v-else-if="currentPage === 'wisdom'" @navigate="currentPage = $event" />
     </main>
 
@@ -142,7 +142,8 @@
             </div>
             <div class="setting-row">
               <label class="setting-label">接口地址</label>
-              <input class="setting-input" v-model="p.base_url" placeholder="https://..." />
+              <input :class="['setting-input', { err: p.base_url && !p.base_url.startsWith('http') }]"
+                v-model="p.base_url" placeholder="https://api.example.com/v1" />
             </div>
             <div class="setting-row">
               <label class="setting-label">认证方式</label>
@@ -156,7 +157,7 @@
               <label class="setting-label">API Key</label>
               <div class="key-row">
                 <input :type="p.showKey ? 'text' : 'password'" class="setting-input"
-                  v-model="p.api_key" :placeholder="p.api_key_masked || 'sk-...'" />
+                  v-model="p.api_key" :placeholder="p.api_key_masked || '留空则不修改'" />
                 <button class="key-toggle" @click="p.showKey = !p.showKey" tabindex="-1">
                   {{ p.showKey ? '隐' : '显' }}
                 </button>
@@ -167,12 +168,13 @@
               <label class="setting-label">模型</label>
               <div class="model-list">
                 <div v-for="(m, mi) in p.models" :key="mi" class="model-entry">
-                  <input class="model-id-input" v-model="m.id" placeholder="model-id" />
+                  <input class="model-id-input" v-model="m.id" placeholder="模型ID" title="前端使用的模型标识" />
+                  <input class="model-api-input" v-model="m.api_model" placeholder="API模型名" title="实际发送给API的模型名，留空则同模型ID" />
                   <input class="model-label-input" v-model="m.label" placeholder="显示名" />
                   <input class="model-tag-input" v-model="m.tag" placeholder="标签" />
                   <button class="model-del-btn" @click="p.models.splice(mi, 1)">&times;</button>
                 </div>
-                <button class="model-add-btn" @click="p.models.push({ id: '', label: '', tag: '', api_model: '' })">+ 添加模型</button>
+                <button class="model-add-btn" @click="p.models.push({ id: '', api_model: '', label: '', tag: '' })">+ 添加模型</button>
               </div>
             </div>
           </div>
@@ -369,6 +371,29 @@ async function handleSave() {
   saving.value = true
   saveMsg.value = ''
   try {
+    // 前端校验
+    for (const p of providerForms.value) {
+      if (!p.base_url || !p.base_url.startsWith('http')) {
+        saveOk.value = false
+        saveMsg.value = `服务商「${p.name || '未命名'}」的接口地址无效`
+        saving.value = false
+        return
+      }
+      const validModels = p.models.filter(m => m.id.trim())
+      if (!validModels.length) {
+        saveOk.value = false
+        saveMsg.value = `服务商「${p.name || '未命名'}」至少需要一个模型`
+        saving.value = false
+        return
+      }
+    }
+    if (!embeddingForm.value.base_url || !embeddingForm.value.base_url.startsWith('http')) {
+      saveOk.value = false
+      saveMsg.value = 'Embedding 接口地址无效'
+      saving.value = false
+      return
+    }
+
     const providers = providerForms.value.map(p => {
       const models = {}
       for (const m of p.models) {

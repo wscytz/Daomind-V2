@@ -18,19 +18,9 @@
   <div class="messages-wrap" role="log" aria-label="对话内容" aria-live="polite">
     <div class="messages" ref="msgContainer">
       <div v-if="store.messages.length === 0 && !store.isLoading" class="empty-state">
-        <template v-if="!healthOk">
-          <div class="welcome-card">
-            <div class="welcome-icon" aria-hidden="true">道</div>
-            <div class="welcome-title">欢迎使用道心</div>
-            <div class="welcome-desc">请先点击右上角齿轮图标，配置您的 AI 服务商接口</div>
-            <button class="welcome-btn" @click="emit('openSettings')">打开设置</button>
-          </div>
-        </template>
-        <template v-else>
-          <div class="empty-glyph" aria-hidden="true">道</div>
-          <div class="empty-title">道法自然，心安即归处</div>
-          <div class="empty-sub">以古人之智，解今人之忧</div>
-        </template>
+        <div class="empty-glyph" aria-hidden="true">道</div>
+        <div class="empty-title">道法自然，心安即归处</div>
+        <div class="empty-sub">以古人之智，解今人之忧</div>
       </div>
 
       <template v-for="(msg, i) in store.messages" :key="i">
@@ -98,10 +88,6 @@ import MessageBubble from './MessageBubble.vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-const props = defineProps({
-  healthOk: { type: Boolean, default: true },
-})
-const emit = defineEmits(['open-settings'])
 const store = useChatStore()
 const inputText = ref('')
 const msgContainer = ref(null)

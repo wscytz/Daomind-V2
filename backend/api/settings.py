@@ -22,7 +22,8 @@ class ModelEntry(BaseModel):
 class ProviderSettings(BaseModel):
     name: str = "自定义"
     base_url: str
-    api_key: str = ""
+    api_key: Optional[str] = ""
+    auth_type: str = "bearer"
     models: Dict[str, ModelEntry] = {}
 
 
