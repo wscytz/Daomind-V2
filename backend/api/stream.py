@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSE 流式聊天端点 — 统一用 OpenAICompatClient"""
+"""SSE 流式聊天端点 — 人格自动驱动 RAG 检索"""
 
 import json
 import logging
@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 
-from prompts import build_system_prompt, check_safety
+from prompts import build_system_prompt, check_safety, PERSONA_RAG_MAP
 from clients.base import ChatRequest
 from clients.unified import UnifiedAPIClient
 from rag.service import RAGService
@@ -31,8 +31,6 @@ class StreamChatBody(BaseModel):
     persona: str = "standard"
     depth: str = "standard"
     history: Optional[List[Dict[str, str]]] = None
-    rag_mode: bool = False
-    classic: str = "daodejing"
 
 
 def _run_stream(base_url: str, api_key: str, api_model: str, messages: list, q: queue.Queue):
@@ -101,13 +99,16 @@ async def chat_stream(
             yield "data: [DONE]\n\n"
         return StreamingResponse(safety_gen(), media_type="text/event-stream")
 
-    # RAG
+    # 人格驱动 RAG 路由
     rag_context, sources, principle = "", [], None
-    if body.rag_mode:
+    classics = PERSONA_RAG_MAP.get(body.persona, [])
+
+    if classics:
         try:
-            rag_result = rag.search(body.message, classic=body.classic, top_k=3)
+            rag_result = rag.search_multi(body.message, classics=classics, top_k=3)
             rag_context = rag.format_context(rag_result.get("results", []))
             sources = rag_result.get("sources", [])
+            # 道家人格：情绪→原则映射
             emotion = detect_emotion(body.message)
             principle = get_principle(emotion) if emotion else None
         except Exception as e:
@@ -115,7 +116,7 @@ async def chat_stream(
 
     system_prompt = build_system_prompt(body.persona, body.depth, rag_context)
     if principle and body.persona == "daoist":
-        system_prompt += f"\n\n道家保健诀：{principle}"
+        system_prompt += f"\n\n当前情绪倾向：{detect_emotion(body.message)}\n道家保健诀：{principle}"
 
     messages = list(body.history or [])
     if system_prompt:
@@ -131,7 +132,7 @@ async def chat_stream(
             config = list(choices.values())[0]
         else:
             async def err_gen():
-                yield f"data: {json.dumps({'type': 'error', 'content': '没有可用模型'}, ensure_ascii=False)}\n\n"
+                yield f"data: {json.dumps({'type': 'error', 'content': '没有可用模型，请在设置中添加服务商'}, ensure_ascii=False)}\n\n"
                 yield "data: [DONE]\n\n"
             return StreamingResponse(err_gen(), media_type="text/event-stream")
 

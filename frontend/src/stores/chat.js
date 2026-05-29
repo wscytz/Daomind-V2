@@ -51,8 +51,6 @@ export const useChatStore = defineStore('chat', () => {
   const persona = ref(prefs.persona || 'standard')
   const depth = ref(prefs.depth || 'standard')
   const model = ref(prefs.model || 'glm-4-flash')
-  const ragMode = ref(false)
-  const classic = ref('daodejing')
 
   // UI 状态
   const isLoading = ref(false)
@@ -169,7 +167,7 @@ export const useChatStore = defineStore('chat', () => {
 
     abortStream = streamChat({
       message: text, model: model.value, persona: persona.value,
-      depth: depth.value, ragMode: ragMode.value, classic: classic.value,
+      depth: depth.value,
       history: history.value.slice(0, -1),
       onToken: (token) => {
         fullText += token
@@ -210,18 +208,10 @@ export const useChatStore = defineStore('chat', () => {
 
   async function _fallbackSend(text) {
     try {
-      let data
-      if (ragMode.value) {
-        data = await sendRagMessage({
-          message: text, classic: classic.value, persona: persona.value,
-          depth: depth.value, model: model.value, history: history.value.slice(0, -1),
-        })
-      } else {
-        data = await sendMessage({
-          message: text, model: model.value, persona: persona.value,
-          depth: depth.value, history: history.value.slice(0, -1),
-        })
-      }
+      const data = await sendMessage({
+        message: text, model: model.value, persona: persona.value,
+        depth: depth.value, history: history.value.slice(0, -1),
+      })
       _pushAssistant(data.response, data.thinking, data)
     } catch (e) {
       error.value = e.response?.data?.detail || e.message
@@ -290,7 +280,7 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     messages, conversations, activeId, persona, depth, model,
-    ragMode, classic, isLoading, error, history, streamingText,
+    isLoading, error, history, streamingText,
     send, clearChat, stopStream, retryLast, exportMarkdown,
     newConversation, switchConversation, deleteConversation,
     renameConversation, searchConversations,

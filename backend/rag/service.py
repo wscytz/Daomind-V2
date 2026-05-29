@@ -144,3 +144,24 @@ class RAGService:
                 if r.get("title"): parts.append(f"\n{i}. {r['title']}")
                 if r.get("content"): parts.append(f"   {r['content'][:200]}")
         return "\n".join(parts)
+
+    def search_multi(self, query: str, classics: List[str], top_k: int = 3) -> Dict:
+        """多库综参检索：合并多个经典库的结果"""
+        if not classics:
+            return {"results": [], "sources": []}
+
+        all_results = []
+        per_classic_k = max(top_k, 2)  # 每个库至少取 2 条，合并后再截断
+
+        for classic in classics:
+            r = self.search(query, classic=classic, top_k=per_classic_k)
+            all_results.extend(r.get("results", []))
+
+        # 去重（按相似度排序后截断）
+        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+        all_results = all_results[:top_k]
+
+        return {
+            "results": all_results,
+            "sources": list(set(r.get("source", "") for r in all_results)),
+        }

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""测试提示词构建和安全检查"""
+"""测试提示词构建、安全检查、人格RAG映射"""
 
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
@@ -45,6 +45,30 @@ class TestBuildSystemPrompt:
         assert "道心" in result
 
 
+class TestPersonaRAGMap:
+    def test_standard_no_rag(self):
+        from prompts import PERSONA_RAG_MAP
+        assert PERSONA_RAG_MAP["standard"] == []
+
+    def test_baijuyi_has_poetry(self):
+        from prompts import PERSONA_RAG_MAP
+        assert "baijuyi" in PERSONA_RAG_MAP["baijuyi"]
+        assert "baijuyi_outer" in PERSONA_RAG_MAP["baijuyi"]
+
+    def test_daoist_multi_classic(self):
+        from prompts import PERSONA_RAG_MAP
+        classics = PERSONA_RAG_MAP["daoist"]
+        assert "daodejing" in classics
+        assert "zhuangzi" in classics
+        assert "daoist_therapy" in classics
+        assert len(classics) == 3
+
+    def test_all_personas_have_entry(self):
+        from prompts import PERSONA_PROMPTS, PERSONA_RAG_MAP
+        for persona in PERSONA_PROMPTS:
+            assert persona in PERSONA_RAG_MAP
+
+
 class TestCheckSafety:
     def test_crisis_keyword_triggers(self):
         from prompts import check_safety
@@ -52,6 +76,11 @@ class TestCheckSafety:
             result = check_safety(f"我最近{kw}")
             assert result is not None
             assert "400-161-9995" in result
+
+    def test_indirect_pattern_triggers(self):
+        from prompts import check_safety
+        result = check_safety("世界不需要我，一切都无所谓了")
+        assert result is not None
 
     def test_normal_message_no_trigger(self):
         from prompts import check_safety
@@ -65,6 +94,6 @@ class TestCheckSafety:
 
     def test_all_keywords_covered(self):
         from prompts import SAFETY_KEYWORDS
-        assert len(SAFETY_KEYWORDS) >= 7
+        assert len(SAFETY_KEYWORDS) >= 10
         assert "自杀" in SAFETY_KEYWORDS
         assert "不想活" in SAFETY_KEYWORDS

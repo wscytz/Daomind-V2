@@ -7,8 +7,8 @@ export async function sendMessage({ message, model = 'glm-4-flash', persona = 's
   return data
 }
 
-export async function sendRagMessage({ message, classic = 'daodejing', persona = 'daoist', depth = 'standard', model = 'glm-4-flash', history = [] }) {
-  const { data } = await api.post('/rag/counseling', { message, classic, persona, depth, model, history })
+export async function sendRagMessage({ message, persona = 'daoist', depth = 'standard', model = 'glm-4-flash', history = [] }) {
+  const { data } = await api.post('/rag/counseling', { message, persona, depth, model, history })
   return data
 }
 
@@ -29,20 +29,13 @@ export async function saveSettings({ providers, embedding }) {
 
 /**
  * SSE 流式对话
- * @param {Object} params
- * @param {function} onToken - 收到内容 token 时调用 (text: string)
- * @param {function} onThinking - 收到思考内容时调用 (text: string)
- * @param {function} onMeta - 收到元数据时调用 (meta: object)
- * @param {function} onUsage - 收到 token 用量时调用 (usage: object)
- * @param {function} onDone - 流结束时调用 ()
- * @param {function} onError - 出错时调用 (error: string)
  */
 export function streamChat({
   message, model = 'glm-4-flash', persona = 'standard', depth = 'standard',
-  ragMode = false, classic = 'daodejing', history = [],
+  history = [],
   onToken, onThinking, onMeta, onUsage, onDone, onError,
 }) {
-  const body = { message, model, persona, depth, history, rag_mode: ragMode, classic }
+  const body = { message, model, persona, depth, history }
 
   const controller = new AbortController()
 

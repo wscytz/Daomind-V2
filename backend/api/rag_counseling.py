@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""POST /api/rag/counseling — RAG 增强咨询"""
+"""POST /api/rag/counseling — RAG 增强咨询（人格驱动知识库）"""
 
 import logging
 from fastapi import APIRouter, Depends
@@ -15,7 +15,6 @@ router = APIRouter()
 
 class RAGBody(BaseModel):
     message: str
-    classic: str = "daodejing"
     persona: str = "daoist"
     depth: str = "standard"
     model: str = "glm-4-flash"
@@ -26,7 +25,6 @@ class RAGBody(BaseModel):
 async def rag_counseling(body: RAGBody, svc: CounselingService = Depends(get_counseling_service)):
     return await svc.counsel(
         message=body.message,
-        classic=body.classic,
         persona=body.persona,
         depth=body.depth,
         model=body.model,

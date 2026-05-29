@@ -312,6 +312,81 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 [data-theme="dark"] .conv-new-btn { border-color: var(--border); }
 [data-theme="dark"] .conv-rename-input { background: #0c0c0e; color: var(--stone); border-color: var(--gold-dim); }
 
+/* Persona with hint */
+.persona-text { display: flex; flex-direction: column; gap: 1px; }
+.persona-name { font-size: 13px; line-height: 1.3; }
+.persona-hint { font-family: var(--font-sans); font-size: 9px; color: var(--cloud); }
+.persona-btn.active .persona-hint { color: var(--gold-dim); }
+
+/* Provider section header (editable name) */
+.provider-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.provider-name-input {
+  font-family: var(--font-serif); font-size: 12px; font-weight: 600;
+  color: var(--ink); background: none; border: none; border-bottom: 1px solid transparent;
+  padding: 0 0 1px 0; outline: none; letter-spacing: 0.5px;
+  transition: border-color 0.15s;
+}
+.provider-name-input:hover { border-bottom-color: var(--cloud); }
+.provider-name-input:focus { border-bottom-color: var(--gold-dim); }
+
+.provider-del-btn {
+  width: 18px; height: 18px; border: none; background: none;
+  cursor: pointer; font-size: 14px; color: var(--cloud);
+  border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.provider-del-btn:hover { color: var(--rose); background: var(--rose-soft); }
+
+/* Model list in settings */
+.model-list { display: flex; flex-direction: column; gap: 3px; }
+.model-entry {
+  display: flex; gap: 3px; align-items: center;
+}
+.model-id-input {
+  flex: 2; padding: 5px 8px; border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 3px; font-family: var(--font-mono); font-size: 10px;
+  color: var(--stone); background: white; outline: none;
+}
+.model-label-input {
+  flex: 1.5; padding: 5px 8px; border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 3px; font-family: var(--font-sans); font-size: 10px;
+  color: var(--stone); background: white; outline: none;
+}
+.model-tag-input {
+  width: 48px; padding: 5px 6px; border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 3px; font-family: var(--font-sans); font-size: 10px;
+  color: var(--stone); background: white; outline: none;
+}
+.model-del-btn {
+  width: 16px; height: 16px; border: none; background: none;
+  cursor: pointer; font-size: 11px; color: var(--cloud);
+  border-radius: 2px; flex-shrink: 0; transition: all 0.12s;
+}
+.model-del-btn:hover { color: var(--rose); }
+.model-add-btn {
+  padding: 4px 8px; border: 1px dashed rgba(0,0,0,0.08); border-radius: 3px;
+  background: transparent; font-family: var(--font-sans); font-size: 10px;
+  color: var(--cloud); cursor: pointer; transition: all 0.15s; text-align: left;
+}
+.model-add-btn:hover { border-color: var(--gold-dim); color: var(--gold-dim); }
+
+.provider-add-btn {
+  width: 100%; padding: 8px; border: 1px dashed rgba(0,0,0,0.08); border-radius: 6px;
+  background: transparent; font-family: var(--font-sans); font-size: 11px;
+  color: var(--cloud); cursor: pointer; transition: all 0.15s;
+}
+.provider-add-btn:hover { border-color: var(--gold-dim); color: var(--gold-dim); }
+
+[data-theme="dark"] .model-id-input,
+[data-theme="dark"] .model-label-input,
+[data-theme="dark"] .model-tag-input { background: #0c0c0e; color: var(--stone); border-color: var(--border); }
+[data-theme="dark"] .provider-name-input { color: var(--ink); }
+[data-theme="dark"] .model-add-btn,
+[data-theme="dark"] .provider-add-btn { border-color: var(--border); }
+
 /* Token count */
 .msg-tokens {
   font-family: var(--font-mono); font-size: 8px;
