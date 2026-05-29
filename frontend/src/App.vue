@@ -315,6 +315,20 @@ async function refreshHealth() {
     const h = await checkHealth()
     healthOk.value = h.status === 'ok'
     ragCount.value = h.rag_loaded || 0
+    // models 现在是 { id: {provider, label, tag, ...} } 格式
+    if (h.models && typeof h.models === 'object') {
+      const modelObjs = h.models
+      // 如果没有 providerForms（首次加载），从 health 构建模型分组
+      if (!providerForms.value.length) {
+        const byProvider = {}
+        for (const [id, info] of Object.entries(modelObjs)) {
+          const pname = info.provider || '自定义'
+          if (!byProvider[pname]) byProvider[pname] = { name: pname, base_url: '', api_key: '', showKey: false, models: [] }
+          byProvider[pname].models.push({ id, api_model: info.api_model || id, label: info.label || id, tag: info.tag || '' })
+        }
+        providerForms.value = Object.values(byProvider)
+      }
+    }
   } catch (e) {
     console.warn('健康检查失败:', e)
     healthOk.value = false

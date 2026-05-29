@@ -3,11 +3,21 @@
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Dict
 from .base import BaseNPZRAG
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_original(text: str) -> str:
+    """清洗原文：移除混入的场景/情绪标签"""
+    if not text:
+        return ""
+    # 移除「场景：xxx」「情绪：xxx」等尾部标签
+    text = re.sub(r'\n*(?:场景|情绪|标签)[：:].+', '', text)
+    return text.strip()
 
 
 class DaodejingProvider(BaseNPZRAG):
@@ -18,7 +28,7 @@ class DaodejingProvider(BaseNPZRAG):
         return {
             "id": str(idx), "similarity": sim, "source": "daodejing",
             "chapter": item.get("chapter", idx),
-            "original": item.get("original", ""),
+            "original": _clean_original(item.get("original", "")),
             "translation": item.get("translation", ""),
             "interpretation": item.get("interpretation", ""),
             "scene_tags": item.get("scene_tags", []),
@@ -37,7 +47,7 @@ class LunyuProvider(BaseNPZRAG):
         return {
             "id": str(idx), "similarity": sim, "source": "lunyu",
             "chapter": item.get("chapter", ""),
-            "original": item.get("original", ""),
+            "original": _clean_original(item.get("original", "")),
             "translation": item.get("translation", ""),
             "interpretation": item.get("interpretation", ""),
             "emotion_tags": item.get("emotion_tags", []),
@@ -53,7 +63,7 @@ class ZhuangziProvider(BaseNPZRAG):
         return {
             "id": str(idx), "similarity": sim, "source": "zhuangzi",
             "chapter": item.get("chapter", ""),
-            "original": item.get("original", ""),
+            "original": _clean_original(item.get("original", "")),
             "translation": item.get("translation", ""),
             "interpretation": item.get("interpretation", ""),
             "emotion_tags": item.get("emotion_tags", []),

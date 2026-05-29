@@ -86,3 +86,15 @@
 2026-05-29 20:38:19,204 [rag.providers] INFO: [白居易外圈] 从JSON加载 2128 首诗
 2026-05-29 20:38:19,374 [rag.service] INFO: RAG服务就绪，已加载: ['daodejing', 'lunyu', 'zhuangzi', 'daoist_therapy', 'baijuyi', 'baijuyi_outer']
 2026-05-29 20:38:19,375 [main] INFO: 启动完成 | RAG providers: ['daodejing', 'lunyu', 'zhuangzi', 'daoist_therapy', 'baijuyi', 'baijuyi_outer'] | 可用模型: ['glm-4-flash', 'glm-4.7', 'glm-5', 'emohaa', 'seed', 'seed-lite']
+2026-05-29 21:44:46,180 [main] INFO: 前端: C:\daomind\frontend\dist
+2026-05-29 21:44:46,181 [main] INFO: 初始化 RAG... Embedding: https://open.bigmodel.cn/api/paas/v4 model=embedding-3
+2026-05-29 21:44:46,188 [rag.base] INFO: [道德经] 加载成功: 81条, 维度(81, 2048)
+2026-05-29 21:44:46,202 [rag.base] INFO: [论语] 加载成功: 290条, 维度(290, 2048)
+2026-05-29 21:44:46,213 [rag.base] INFO: [庄子] 加载成功: 200条, 维度(200, 2048)
+2026-05-29 21:44:46,216 [rag.base] INFO: [道家治疗] 加载成功: 0条, 维度(30, 2048)
+2026-05-29 21:44:46,216 [rag.providers] INFO: [道家治疗] 从JSON加载 30 条知识
+2026-05-29 21:44:46,239 [rag.base] INFO: [白居易] 加载成功: 500条, 维度(500, 2048)
+2026-05-29 21:44:46,245 [rag.providers] INFO: [白居易] 从JSON加载 500 首诗
+2026-05-29 21:44:46,289 [rag.base] INFO: [白居易外圈] 加载成功: 2128条, 维度(2128, 2048)
+2026-05-29 21:44:46,298 [rag.providers] INFO: [白居易外圈] 从JSON加载 2128 首诗
+2026-05-29 21:44:46,466 [rag.service] INFO: RAG服务就绪，已加载: ['daodejing', 'lunyu', 'zhuangzi', 'daoist_therapy', 'baijuyi', 'baijuyi_outer']
