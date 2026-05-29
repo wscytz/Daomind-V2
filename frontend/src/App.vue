@@ -148,7 +148,7 @@
               <label class="setting-label">API Key</label>
               <div class="key-row">
                 <input :type="p.showKey ? 'text' : 'password'" class="setting-input"
-                  v-model="p.api_key" placeholder="sk-..." />
+                  v-model="p.api_key" :placeholder="p.api_key_masked || 'sk-...'" />
                 <button class="key-toggle" @click="p.showKey = !p.showKey" tabindex="-1">
                   {{ p.showKey ? '隐' : '显' }}
                 </button>
@@ -291,7 +291,8 @@ async function loadSettings() {
     providerForms.value = (s.providers || []).map(p => ({
       name: p.name || '自定义',
       base_url: p.base_url || '',
-      api_key: p.api_key || '',
+      api_key: '',  // 不回填明文 key
+      api_key_masked: p.api_key_masked || '',
       showKey: false,
       models: Object.entries(p.models || {}).map(([id, info]) => ({
         id,
@@ -302,7 +303,8 @@ async function loadSettings() {
     }))
     if (s.embedding) {
       embeddingForm.value.base_url = s.embedding.base_url || ''
-      embeddingForm.value.api_key = s.embedding.api_key || ''
+      embeddingForm.value.api_key = ''
+      embeddingForm.value.api_key_masked = s.embedding.api_key_masked || ''
       embeddingForm.value.model = s.embedding.model || 'embedding-3'
     }
   } catch (e) {
@@ -369,12 +371,14 @@ async function handleSave() {
           }
         }
       }
-      return { name: p.name || '自定义', base_url: p.base_url, api_key: p.api_key, models }
+      // 只发送用户实际填写的 key（空串表示未修改）
+      const keyToSend = p.api_key || undefined
+      return { name: p.name || '自定义', base_url: p.base_url, api_key: keyToSend, models }
     }).filter(p => p.base_url)
 
     const embedding = {
       base_url: embeddingForm.value.base_url,
-      api_key: embeddingForm.value.api_key,
+      api_key: embeddingForm.value.api_key || undefined,
       model: embeddingForm.value.model,
     }
 

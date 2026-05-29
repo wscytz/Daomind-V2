@@ -98,3 +98,4 @@
 2026-05-29 21:44:46,289 [rag.base] INFO: [白居易外圈] 加载成功: 2128条, 维度(2128, 2048)
 2026-05-29 21:44:46,298 [rag.providers] INFO: [白居易外圈] 从JSON加载 2128 首诗
 2026-05-29 21:44:46,466 [rag.service] INFO: RAG服务就绪，已加载: ['daodejing', 'lunyu', 'zhuangzi', 'daoist_therapy', 'baijuyi', 'baijuyi_outer']
+2026-05-29 21:44:46,467 [main] INFO: 启动完成 | RAG providers: ['daodejing', 'lunyu', 'zhuangzi', 'daoist_therapy', 'baijuyi', 'baijuyi_outer'] | 可用模型: []

@@ -115,31 +115,42 @@ def _load_settings_file():
 
 
 def save_settings(providers_data: list, embedding_data: dict):
-    """保存配置到 settings.json 并完全替换运行时 PROVIDERS"""
+    """保存配置到 settings.json 并完全替换运行时 PROVIDERS
+    如果 api_key 为空/None/undefined，保留原有 key 不覆盖
+    """
     global PROVIDERS, EMBEDDING_PROVIDER
-    payload = {"providers": providers_data, "embedding": embedding_data}
+    # 构建新 provider 列表，保留未修改的 key
+    new_providers = []
+    old_key_map = {p["name"]: p.get("api_key", "") for p in PROVIDERS}
+    for p in providers_data:
+        if not p.get("base_url") or not isinstance(p.get("models"), dict):
+            continue
+        key = p.get("api_key") or old_key_map.get(p.get("name", ""), "")
+        new_providers.append({
+            "name": p.get("name", "自定义"),
+            "base_url": p["base_url"],
+            "api_key": key,
+            "models": p["models"],
+        })
+    # 写入文件（文件里存明文 key，只有本地可读）
+    payload = {"providers": new_providers, "embedding": {
+        "base_url": embedding_data.get("base_url", EMBEDDING_PROVIDER["base_url"]),
+        "api_key": embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", ""),
+        "model": embedding_data.get("model", EMBEDDING_PROVIDER["model"]),
+    }}
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     with _config_lock:
         PROVIDERS.clear()
-        for p in providers_data:
-            if p.get("base_url") and isinstance(p.get("models"), dict):
-                PROVIDERS.append({
-                    "name": p.get("name", "自定义"),
-                    "base_url": p["base_url"],
-                    "api_key": p.get("api_key", ""),
-                    "models": p["models"],
-                })
-        if embedding_data.get("base_url"):
-            EMBEDDING_PROVIDER["base_url"] = embedding_data["base_url"]
-        if embedding_data.get("api_key"):
-            EMBEDDING_PROVIDER["api_key"] = embedding_data["api_key"]
-        if embedding_data.get("model"):
-            EMBEDDING_PROVIDER["model"] = embedding_data["model"]
+        PROVIDERS.extend(new_providers)
+        emb = payload["embedding"]
+        EMBEDDING_PROVIDER["base_url"] = emb["base_url"]
+        EMBEDDING_PROVIDER["api_key"] = emb["api_key"]
+        EMBEDDING_PROVIDER["model"] = emb["model"]
 
 
 def get_settings_snapshot() -> dict:
-    """返回当前配置的快照（key 脱敏）"""
+    """返回当前配置的快照（key 脱敏，不暴露明文）"""
     providers_safe = []
     for p in PROVIDERS:
         key = p.get("api_key", "")
@@ -147,7 +158,6 @@ def get_settings_snapshot() -> dict:
         providers_safe.append({
             "name": p["name"],
             "base_url": p["base_url"],
-            "api_key": key,
             "api_key_masked": masked,
             "models": p.get("models", {}),
         })
@@ -157,7 +167,6 @@ def get_settings_snapshot() -> dict:
         "providers": providers_safe,
         "embedding": {
             "base_url": EMBEDDING_PROVIDER["base_url"],
-            "api_key": emb_key,
             "api_key_masked": emb_masked,
             "model": EMBEDDING_PROVIDER["model"],
         },
