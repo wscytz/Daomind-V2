@@ -194,6 +194,7 @@ export const useChatStore = defineStore('chat', () => {
       content,
       thinking: thinking || null,
       sources: meta.sources || [],
+      ragDetails: meta.rag_details || [],
       principle: meta.principle || null,
       inferenceTime: meta.inference_time_ms,
       usage: meta.usage || null,

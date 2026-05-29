@@ -42,6 +42,14 @@
       </div>
 
       <div class="sidebar-body">
+        <!-- 页面切换 -->
+        <div class="section">
+          <div class="page-tabs">
+            <button :class="['page-tab', { active: currentPage === 'chat' }]" @click="currentPage = 'chat'">对话</button>
+            <button :class="['page-tab', { active: currentPage === 'wisdom' }]" @click="currentPage = 'wisdom'">智慧</button>
+          </div>
+        </div>
+
         <!-- 人格（= 模式，决定 RAG 路由） -->
         <div class="section">
           <div class="section-label">模式</div>
@@ -100,7 +108,7 @@
         <div class="topbar-left">
           <button class="hamburger-btn" @click="showSidebar = !showSidebar"
             aria-label="打开侧边栏">&#9776;</button>
-          <span class="topbar-title">{{ currentPersonaLabel }}</span>
+          <span class="topbar-title">{{ currentPage === 'chat' ? currentPersonaLabel : '每日智慧' }}</span>
         </div>
         <div class="topbar-right">
           <span v-if="activePersonaRag" class="mode-chip rag">{{ activePersonaRag }}</span>
@@ -111,7 +119,8 @@
           <button class="settings-btn" @click="openSettings" title="设置" aria-label="打开设置">&#9881;</button>
         </div>
       </div>
-      <ChatWindow />
+      <ChatWindow v-if="currentPage === 'chat'" />
+      <WisdomPage v-else-if="currentPage === 'wisdom'" />
     </main>
 
     <!-- Settings Modal -->
@@ -208,10 +217,12 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useChatStore } from './stores/chat'
 import { checkHealth, getSettings, saveSettings } from './api'
 import ChatWindow from './components/ChatWindow.vue'
+import WisdomPage from './components/WisdomPage.vue'
 
 const store = useChatStore()
 const showSidebar = ref(false)
 const showSettings = ref(false)
+const currentPage = ref('chat')  // 'chat' | 'wisdom'
 const isDark = ref(document.documentElement.getAttribute('data-theme') === 'dark')
 const healthOk = ref(false)
 const ragCount = ref(0)

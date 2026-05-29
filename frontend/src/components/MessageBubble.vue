@@ -1,7 +1,7 @@
 <template>
   <div class="msg-assistant-inner">
     <div class="msg-avatar">
-      <span class="msg-avatar-dot"></span>
+      <span class="msg-avatar-dot" aria-hidden="true"></span>
       {{ avatarLabel }}
     </div>
 
@@ -14,7 +14,29 @@
       <div v-if="showThink" class="think-content">{{ message.thinking }}</div>
     </div>
 
-    <div v-if="message.sources && message.sources.length" class="sources-row">
+    <!-- RAG 引用面板 -->
+    <div v-if="message.ragDetails && message.ragDetails.length" class="citation-block">
+      <span class="citation-toggle" @click="showCitations = !showCitations">
+        {{ showCitations ? '收起出处' : `经典出处 (${message.ragDetails.length})` }}
+      </span>
+      <div v-if="showCitations" class="citation-list">
+        <div v-for="(c, i) in message.ragDetails" :key="i" class="citation-item">
+          <div class="citation-header">
+            <span class="citation-source">{{ c.source_name }}</span>
+            <span v-if="c.chapter" class="citation-chapter">{{ c.chapter }}</span>
+            <span v-if="c.title" class="citation-chapter">《{{ c.title }}》</span>
+            <span class="citation-sim" :title="`相关度 ${(c.similarity * 100).toFixed(0)}%`">
+              <span class="sim-bar"><span class="sim-fill" :style="{ width: Math.max(c.similarity * 100, 10) + '%' }"></span></span>
+            </span>
+          </div>
+          <div v-if="c.original" class="citation-original">{{ c.original }}</div>
+          <div v-if="c.translation" class="citation-translation">{{ c.translation }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 旧格式兼容 -->
+    <div v-else-if="message.sources && message.sources.length" class="sources-row">
       <span v-for="s in message.sources" :key="s" class="source-chip">{{ sourceName(s) }}</span>
     </div>
 
@@ -44,10 +66,11 @@ const props = defineProps({
 defineEmits(['retry'])
 
 const showThink = ref(false)
+const showCitations = ref(false)
 const copied = ref(false)
 
 const avatarLabel = computed(() => {
-  if (props.message.sources && props.message.sources.length) return '经典释读'
+  if (props.message.ragDetails?.length || props.message.sources?.length) return '经典释读'
   return '道心'
 })
 
@@ -59,9 +82,7 @@ const renderedContent = computed(() => {
 const tokenLabel = computed(() => {
   const u = props.message.usage
   if (!u) return ''
-  const total = u.total_tokens
-  if (total) return `${total}t`
-  return ''
+  return u.total_tokens ? `${u.total_tokens}t` : ''
 })
 
 const tokenTitle = computed(() => {

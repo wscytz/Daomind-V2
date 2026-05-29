@@ -17,6 +17,11 @@ export async function checkHealth() {
   return data
 }
 
+export async function getWisdom() {
+  const { data } = await api.get('/wisdom')
+  return data
+}
+
 export async function getSettings() {
   const { data } = await api.get('/settings')
   return data

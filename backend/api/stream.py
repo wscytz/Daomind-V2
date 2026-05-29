@@ -100,7 +100,7 @@ async def chat_stream(
         return StreamingResponse(safety_gen(), media_type="text/event-stream")
 
     # 人格驱动 RAG 路由
-    rag_context, sources, principle = "", [], None
+    rag_context, sources, rag_details, principle = "", [], [], None
     classics = PERSONA_RAG_MAP.get(body.persona, [])
 
     if classics:
@@ -108,6 +108,20 @@ async def chat_stream(
             rag_result = rag.search_multi(body.message, classics=classics, top_k=3)
             rag_context = rag.format_context(rag_result.get("results", []))
             sources = rag_result.get("sources", [])
+            # 构建引用详情
+            source_names = {"daodejing": "道德经", "zhuangzi": "庄子", "lunyu": "论语",
+                            "daoist_therapy": "道家认知疗法", "poem": "白居易", "poem_outer": "白居易"}
+            for r in rag_result.get("results", []):
+                src = r.get("source", "")
+                rag_details.append({
+                    "source": src,
+                    "source_name": source_names.get(src, src),
+                    "chapter": r.get("chapter", ""),
+                    "title": r.get("title", ""),
+                    "original": r.get("original", r.get("content", "")),
+                    "translation": r.get("translation", r.get("modern_context", "")),
+                    "similarity": round(r.get("similarity", 0), 3),
+                })
             # 道家人格：情绪→原则映射
             emotion = detect_emotion(body.message)
             principle = get_principle(emotion) if emotion else None
@@ -137,7 +151,8 @@ async def chat_stream(
             return StreamingResponse(err_gen(), media_type="text/event-stream")
 
     meta = json.dumps({
-        "type": "meta", "sources": sources, "principle": principle, "model": body.model
+        "type": "meta", "sources": sources, "rag_details": rag_details,
+        "principle": principle, "model": body.model
     }, ensure_ascii=False)
 
     q = queue.Queue()

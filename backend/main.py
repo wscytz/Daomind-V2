@@ -17,6 +17,7 @@ from api.rag_counseling import router as rag_router
 from api.health import router as health_router
 from api.stream import router as stream_router
 from api.settings import router as settings_router
+from api.wisdom import router as wisdom_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
@@ -64,6 +65,7 @@ app.include_router(rag_router, prefix="/api")
 app.include_router(health_router, prefix="/api")
 app.include_router(stream_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
+app.include_router(wisdom_router, prefix="/api")
 
 # 静态文件（生产模式）
 frontend_dist = config.FRONTEND_DIR
