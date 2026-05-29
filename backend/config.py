@@ -48,7 +48,7 @@ if not _env_file.exists():
     _env_file = _base / ".env"
 load_dotenv(_env_file)
 
-HOST = os.getenv("HOST", "0.0.0.0")
+HOST = os.getenv("HOST", "127.0.0.1")
 PORT = int(os.getenv("PORT", "8001"))
 _CORS_ENV = os.getenv("CORS_ORIGINS", "")
 if _CORS_ENV == "*":

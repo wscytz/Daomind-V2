@@ -10,6 +10,28 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 }
 
+// ── AES-GCM 加解密（Web Crypto API，防同机脚本直接读明文） ──
+const ENC_KEY = new TextEncoder().encode('daomind-local-enc-key-32byte')
+
+async function _encrypt(text) {
+  const key = await crypto.subtle.importKey('raw', ENC_KEY, { name: 'AES-GCM' }, false, ['encrypt'])
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text))
+  const buf = new Uint8Array(iv.length + new Uint8Array(enc).length)
+  buf.set(iv)
+  buf.set(new Uint8Array(enc), iv.length)
+  return btoa(String.fromCharCode(...buf))
+}
+
+async function _decrypt(encrypted) {
+  const key = await crypto.subtle.importKey('raw', ENC_KEY, { name: 'AES-GCM' }, false, ['decrypt'])
+  const buf = Uint8Array.from(atob(encrypted), c => c.charCodeAt(0))
+  const iv = buf.slice(0, 12)
+  const data = buf.slice(12)
+  const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data)
+  return new TextDecoder().decode(dec)
+}
+
 function loadConversations() {
   try {
     const raw = localStorage.getItem(CONV_KEY)
@@ -20,9 +42,29 @@ function loadConversations() {
   }
 }
 
-function saveConversations(convs) {
+async function loadConversationsAsync() {
   try {
-    localStorage.setItem(CONV_KEY, JSON.stringify(convs))
+    const raw = localStorage.getItem(CONV_KEY)
+    if (!raw) return []
+    // 先尝试解密（新格式）
+    try {
+      const decrypted = await _decrypt(raw)
+      return JSON.parse(decrypted)
+    } catch {
+      // 解密失败说明是旧版明文，直接当 JSON 解析（兼容迁移）
+      return JSON.parse(raw)
+    }
+  } catch (e) {
+    console.warn('对话加载失败:', e)
+    return []
+  }
+}
+
+async function saveConversations(convs) {
+  try {
+    const json = JSON.stringify(convs)
+    const encrypted = await _encrypt(json)
+    localStorage.setItem(CONV_KEY, encrypted)
   } catch (e) {
     console.warn('对话保存失败:', e)
   }
@@ -42,9 +84,16 @@ function savePrefs(prefs) {
 }
 
 export const useChatStore = defineStore('chat', () => {
-  // 对话列表
+  // 对话列表（先用同步加载占位，异步解密后替换）
   const conversations = ref(loadConversations())
   const activeId = ref(localStorage.getItem(ACTIVE_KEY) || null)
+
+  // 异步解密并替换（兼容旧版明文数据）
+  loadConversationsAsync().then(decs => {
+    if (decs.length > 0) {
+      conversations.value = decs
+    }
+  })
 
   // 当前偏好
   const prefs = loadPrefs()
@@ -73,6 +122,8 @@ export const useChatStore = defineStore('chat', () => {
   )
 
   let abortStream = null
+  let streamBuffer = ''
+  let rafId = null
 
   function _persist() {
     saveConversations(conversations.value)
@@ -147,6 +198,8 @@ export const useChatStore = defineStore('chat', () => {
     if (!text.trim() || isLoading.value) return
     error.value = null
     streamingText.value = ''
+    streamBuffer = ''
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null }
 
     // 自动创建对话
     if (!activeId.value || !conversations.value.find(c => c.id === activeId.value)) {
@@ -171,12 +224,21 @@ export const useChatStore = defineStore('chat', () => {
       history: history.value.slice(0, -1),
       onToken: (token) => {
         fullText += token
-        streamingText.value = fullText
+        streamBuffer += token
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            streamingText.value = fullText
+            streamBuffer = ''
+            rafId = null
+          })
+        }
       },
       onThinking: (t) => { thinkingText += t },
       onMeta: (m) => { meta = m },
       onUsage: (u) => { meta.usage = u },
       onDone: () => {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+        streamingText.value = fullText
         _pushAssistant(fullText || '（无回复）', thinkingText, meta)
         streamingText.value = ''
         isLoading.value = false
@@ -244,6 +306,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function stopStream() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null }
     if (abortStream) {
       abortStream()
       abortStream = null

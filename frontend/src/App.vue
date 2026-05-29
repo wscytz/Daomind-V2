@@ -119,7 +119,7 @@
           <button class="settings-btn" @click="openSettings" title="设置" aria-label="打开设置">&#9881;</button>
         </div>
       </div>
-      <ChatWindow v-if="currentPage === 'chat'" />
+      <ChatWindow v-if="currentPage === 'chat'" :health-ok="healthOk" @open-settings="openSettings" />
       <WisdomPage v-else-if="currentPage === 'wisdom'" @navigate="currentPage = $event" />
     </main>
 
