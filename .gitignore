@@ -27,3 +27,6 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+backend/build/
+backend/dist/
+dist/
