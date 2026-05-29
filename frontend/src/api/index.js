@@ -7,11 +7,6 @@ export async function sendMessage({ message, model = 'glm-4-flash', persona = 's
   return data
 }
 
-export async function sendRagMessage({ message, persona = 'daoist', depth = 'standard', model = 'glm-4-flash', history = [] }) {
-  const { data } = await api.post('/rag/counseling', { message, persona, depth, model, history })
-  return data
-}
-
 export async function checkHealth() {
   const { data } = await api.get('/health')
   return data

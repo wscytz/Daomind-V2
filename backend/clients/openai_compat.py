@@ -22,10 +22,11 @@ class OpenAICompatClient(BaseAPIClient):
     # 不预设模型列表，由用户自定义
     SUPPORTED_MODELS = {}
 
-    def __init__(self, api_key: str, base_url: str, timeout: int = 120):
+    def __init__(self, api_key: str, base_url: str, timeout: int = 120, auth_type: str = "bearer"):
         super().__init__(api_key)
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
+        self.auth_type = auth_type
         self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="openai_compat_")
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
@@ -42,9 +43,12 @@ class OpenAICompatClient(BaseAPIClient):
         headers = {
             "Content-Type": "application/json",
         }
-        # 有些服务不需要 key，有些用 Bearer，有些用自定义头
         if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+            if self.auth_type == "bearer" or not self.auth_type:
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            elif self.auth_type == "api-key":
+                headers["X-API-Key"] = self.api_key
+            # auth_type == "none" 时不加任何认证头
 
         start = time.time()
         try:

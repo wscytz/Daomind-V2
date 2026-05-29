@@ -17,7 +17,7 @@ from clients.unified import UnifiedAPIClient
 from rag.service import RAGService
 from services.emotion import detect_emotion, get_principle
 from api.deps import get_api_client, get_rag_service
-from config import get_model_config
+from config import get_model_config, SOURCE_NAMES
 
 import requests as req_lib
 
@@ -33,10 +33,15 @@ class StreamChatBody(BaseModel):
     history: Optional[List[Dict[str, str]]] = None
 
 
-def _run_stream(base_url: str, api_key: str, api_model: str, messages: list, q: queue.Queue):
+def _run_stream(base_url: str, api_key: str, api_model: str, messages: list, q: queue.Queue, auth_type: str = "bearer"):
     """在独立线程跑 OpenAI 兼容 SSE 流"""
     try:
-        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            if auth_type == "bearer" or not auth_type:
+                headers["Authorization"] = f"Bearer {api_key}"
+            elif auth_type == "api-key":
+                headers["X-API-Key"] = api_key
         payload = {"model": api_model, "messages": messages, "stream": True}
 
         resp = req_lib.post(
@@ -95,6 +100,7 @@ async def chat_stream(
     safety = check_safety(body.message)
     if safety:
         async def safety_gen():
+            yield f"data: {json.dumps({'type': 'meta', 'safety_warning': True}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'content', 'content': safety}, ensure_ascii=False)}\n\n"
             yield "data: [DONE]\n\n"
         return StreamingResponse(safety_gen(), media_type="text/event-stream")
@@ -109,8 +115,7 @@ async def chat_stream(
             rag_context = rag.format_context(rag_result.get("results", []))
             sources = rag_result.get("sources", [])
             # 构建引用详情
-            source_names = {"daodejing": "道德经", "zhuangzi": "庄子", "lunyu": "论语",
-                            "daoist_therapy": "道家认知疗法", "poem": "白居易", "poem_outer": "白居易"}
+            source_names = SOURCE_NAMES
             for r in rag_result.get("results", []):
                 src = r.get("source", "")
                 rag_details.append({
@@ -158,7 +163,7 @@ async def chat_stream(
     q = queue.Queue()
     t = threading.Thread(
         target=_run_stream,
-        args=(config["base_url"], config["api_key"], config["api_model"], messages, q),
+        args=(config["base_url"], config["api_key"], config["api_model"], messages, q, config.get("auth_type", "bearer")),
         daemon=True,
     )
     t.start()

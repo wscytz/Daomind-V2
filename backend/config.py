@@ -1,10 +1,28 @@
 import os
 import sys
 import json
+import base64
 import logging
 import threading
 from pathlib import Path
 from dotenv import load_dotenv
+
+
+def _encrypt_key(key: str) -> str:
+    """简单混淆：base64 编码（非密码学安全，防肉眼直接读取）"""
+    if not key:
+        return ""
+    return base64.b64encode(key.encode("utf-8")).decode("ascii")
+
+
+def _decrypt_key(enc: str) -> str:
+    """解混淆"""
+    if not enc:
+        return ""
+    try:
+        return base64.b64decode(enc.encode("ascii")).decode("utf-8")
+    except Exception:
+        return enc  # 兼容旧版明文存储
 
 
 def _get_base_dir() -> Path:
@@ -44,6 +62,16 @@ RAG_DATA_DIR = Path(_RAG_RAW) if _RAG_RAW else _base / "data" / "rag_databases"
 SETTINGS_FILE = _user / "settings.json"
 FRONTEND_DIR = _base / "frontend" / "dist"
 
+# 源名称映射（单一事实来源）
+SOURCE_NAMES = {
+    "daodejing": "道德经",
+    "zhuangzi": "庄子",
+    "lunyu": "论语",
+    "daoist_therapy": "道家认知疗法",
+    "poem": "白居易",
+    "poem_outer": "白居易",
+}
+
 _config_lock = threading.Lock()
 
 # ═══════════════════════════════════════════════════════
@@ -56,6 +84,7 @@ PROVIDERS = [
         "name": "智谱 AI",
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
         "api_key": os.getenv("ZHIPU_API_KEY", ""),
+        "auth_type": "bearer",  # Authorization: Bearer <key>
         "models": {
             "glm-4-flash": {"api_model": "glm-4-flash", "label": "GLM-4 Flash", "tag": "快速"},
             "glm-4.7":     {"api_model": "glm-4.7", "label": "GLM-4.7", "tag": ""},
@@ -67,6 +96,7 @@ PROVIDERS = [
         "name": "豆包",
         "base_url": "https://ark.cn-beijing.volces.com/api/v3",
         "api_key": os.getenv("DOUBAO_API_KEY", ""),
+        "auth_type": "bearer",
         "models": {
             "seed":      {"api_model": "doubao-seed-2-0-pro-260215", "label": "Seed Pro", "tag": "推理"},
             "seed-lite": {"api_model": "doubao-seed-2-0-lite-260215", "label": "Seed Lite", "tag": "快速"},
@@ -78,11 +108,12 @@ EMBEDDING_PROVIDER = {
     "base_url": os.getenv("EMBEDDING_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
     "api_key": os.getenv("EMBEDDING_API_KEY", os.getenv("ZHIPU_API_KEY", "")),
     "model": os.getenv("EMBEDDING_MODEL", "embedding-3"),
+    "auth_type": "bearer",
 }
 
 
 def _load_settings_file():
-    """从 settings.json 加载用户保存的配置，完全替换 PROVIDERS"""
+    """从 settings.json 加载用户保存的配置（key 解混淆），完全替换 PROVIDERS"""
     global PROVIDERS, EMBEDDING_PROVIDER
     if not SETTINGS_FILE.exists():
         return
@@ -90,7 +121,6 @@ def _load_settings_file():
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         with _config_lock:
-            # 完全替换 provider 列表（用户可能有自定义 provider）
             if "providers" in data and isinstance(data["providers"], list):
                 PROVIDERS.clear()
                 for p in data["providers"]:
@@ -98,7 +128,8 @@ def _load_settings_file():
                         PROVIDERS.append({
                             "name": p.get("name", "自定义"),
                             "base_url": p["base_url"],
-                            "api_key": p.get("api_key", ""),
+                            "api_key": _decrypt_key(p.get("api_key", "")),
+                            "auth_type": p.get("auth_type", "bearer"),
                             "models": p["models"],
                         })
             if "embedding" in data:
@@ -106,7 +137,7 @@ def _load_settings_file():
                 if emb.get("base_url"):
                     EMBEDDING_PROVIDER["base_url"] = emb["base_url"]
                 if emb.get("api_key"):
-                    EMBEDDING_PROVIDER["api_key"] = emb["api_key"]
+                    EMBEDDING_PROVIDER["api_key"] = _decrypt_key(emb["api_key"])
                 if emb.get("model"):
                     EMBEDDING_PROVIDER["model"] = emb["model"]
     except Exception as e:
@@ -115,11 +146,8 @@ def _load_settings_file():
 
 
 def save_settings(providers_data: list, embedding_data: dict):
-    """保存配置到 settings.json 并完全替换运行时 PROVIDERS
-    如果 api_key 为空/None/undefined，保留原有 key 不覆盖
-    """
+    """保存配置到 settings.json（key 混淆存储），运行时保持明文"""
     global PROVIDERS, EMBEDDING_PROVIDER
-    # 构建新 provider 列表，保留未修改的 key
     new_providers = []
     old_key_map = {p["name"]: p.get("api_key", "") for p in PROVIDERS}
     for p in providers_data:
@@ -130,12 +158,23 @@ def save_settings(providers_data: list, embedding_data: dict):
             "name": p.get("name", "自定义"),
             "base_url": p["base_url"],
             "api_key": key,
+            "auth_type": p.get("auth_type", "bearer"),
             "models": p["models"],
         })
-    # 写入文件（文件里存明文 key，只有本地可读）
-    payload = {"providers": new_providers, "embedding": {
+    # 写文件时 key 做混淆
+    file_providers = []
+    for p in new_providers:
+        file_providers.append({
+            "name": p["name"],
+            "base_url": p["base_url"],
+            "api_key": _encrypt_key(p["api_key"]),
+            "auth_type": p["auth_type"],
+            "models": p["models"],
+        })
+    emb_key = embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", "")
+    payload = {"providers": file_providers, "embedding": {
         "base_url": embedding_data.get("base_url", EMBEDDING_PROVIDER["base_url"]),
-        "api_key": embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", ""),
+        "api_key": _encrypt_key(emb_key),
         "model": embedding_data.get("model", EMBEDDING_PROVIDER["model"]),
     }}
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
@@ -143,10 +182,9 @@ def save_settings(providers_data: list, embedding_data: dict):
     with _config_lock:
         PROVIDERS.clear()
         PROVIDERS.extend(new_providers)
-        emb = payload["embedding"]
-        EMBEDDING_PROVIDER["base_url"] = emb["base_url"]
-        EMBEDDING_PROVIDER["api_key"] = emb["api_key"]
-        EMBEDDING_PROVIDER["model"] = emb["model"]
+        EMBEDDING_PROVIDER["base_url"] = payload["embedding"]["base_url"]
+        EMBEDDING_PROVIDER["api_key"] = emb_key
+        EMBEDDING_PROVIDER["model"] = payload["embedding"]["model"]
 
 
 def get_settings_snapshot() -> dict:
@@ -159,6 +197,7 @@ def get_settings_snapshot() -> dict:
             "name": p["name"],
             "base_url": p["base_url"],
             "api_key_masked": masked,
+            "auth_type": p.get("auth_type", "bearer"),
             "models": p.get("models", {}),
         })
     emb_key = EMBEDDING_PROVIDER.get("api_key", "")
@@ -200,6 +239,7 @@ def get_all_model_choices() -> dict:
                 "api_model": api_model,
                 "label": label,
                 "tag": tag,
+                "auth_type": p.get("auth_type", "bearer"),
             }
     return choices
 

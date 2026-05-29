@@ -70,6 +70,7 @@ async def save_settings(body: SettingsBody, request: Request):
         embedding_base_url=emb_cfg["base_url"],
         embedding_api_key=emb_cfg["api_key"],
         embedding_model=emb_cfg["model"],
+        auth_type=emb_cfg.get("auth_type", "bearer"),
     )
     request.app.state.rag_service = new_rag
 

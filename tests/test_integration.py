@@ -27,11 +27,8 @@ class TestSolarTerm:
         assert term2["name"] == "冬至"
 
     def test_term_rag_themes_complete(self):
-        from services.solar_term import SOLAR_TERMS, TERM_RAG_THEMES
-        all_terms = []
-        for month_terms in SOLAR_TERMS.values():
-            for _, name, _, _ in month_terms:
-                all_terms.append(name)
+        from services.solar_term import TERM_PERIODS, TERM_RAG_THEMES
+        all_terms = [name for _, _, name, _, _ in TERM_PERIODS]
         assert len(all_terms) == 24
         for name in all_terms:
             assert name in TERM_RAG_THEMES, f"节气 {name} 缺少 RAG 主题映射"

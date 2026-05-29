@@ -15,10 +15,10 @@ class UnifiedAPIClient:
     def __init__(self):
         self._clients: Dict[str, OpenAICompatClient] = {}
 
-    def _get_client(self, base_url: str, api_key: str) -> OpenAICompatClient:
-        cache_key = f"{base_url}:{api_key[:8]}"
+    def _get_client(self, base_url: str, api_key: str, auth_type: str = "bearer") -> OpenAICompatClient:
+        cache_key = f"{base_url}:{api_key[:8]}:{auth_type}"
         if cache_key not in self._clients:
-            self._clients[cache_key] = OpenAICompatClient(api_key, base_url)
+            self._clients[cache_key] = OpenAICompatClient(api_key, base_url, auth_type=auth_type)
         return self._clients[cache_key]
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
@@ -33,7 +33,7 @@ class UnifiedAPIClient:
             logger.warning(f"模型 '{request.model}' 未配置，使用 fallback: {config['api_model']}")
 
         request.model = config["api_model"]
-        client = self._get_client(config["base_url"], config["api_key"])
+        client = self._get_client(config["base_url"], config["api_key"], config.get("auth_type", "bearer"))
         return await client.chat(request)
 
     def available_models(self) -> Dict[str, str]:

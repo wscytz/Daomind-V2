@@ -25,8 +25,8 @@
             <span class="citation-source">{{ c.source_name }}</span>
             <span v-if="c.chapter" class="citation-chapter">{{ c.chapter }}</span>
             <span v-if="c.title" class="citation-chapter">《{{ c.title }}》</span>
-            <span class="citation-sim" :title="`相关度 ${(c.similarity * 100).toFixed(0)}%`">
-              <span class="sim-bar"><span class="sim-fill" :style="{ width: Math.max(c.similarity * 100, 10) + '%' }"></span></span>
+            <span class="citation-sim" :title="`相关度 ${((c.similarity || 0) * 100).toFixed(0)}%`">
+              <span class="sim-bar"><span class="sim-fill" :style="{ width: Math.max((c.similarity || 0) * 100, 10) + '%' }"></span></span>
             </span>
           </div>
           <div v-if="c.original" class="citation-original">{{ c.original }}</div>
@@ -40,7 +40,7 @@
       <span v-for="s in message.sources" :key="s" class="source-chip">{{ sourceName(s) }}</span>
     </div>
 
-    <div v-if="message.safetyWarning" class="safety-box">{{ message.content }}</div>
+    <div v-if="message.safetyWarning || message.safety_warning" class="safety-box">{{ message.content }}</div>
 
     <div class="msg-footer">
       <span v-if="tokenLabel" class="msg-tokens" :title="tokenTitle">{{ tokenLabel }}</span>

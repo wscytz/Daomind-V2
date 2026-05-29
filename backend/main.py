@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
         embedding_base_url=emb_cfg["base_url"],
         embedding_api_key=emb_cfg["api_key"],
         embedding_model=emb_cfg["model"],
+        auth_type=emb_cfg.get("auth_type", "bearer"),
     )
     app.state.rag_service = rag
 

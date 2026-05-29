@@ -198,6 +198,7 @@ export const useChatStore = defineStore('chat', () => {
       principle: meta.principle || null,
       inferenceTime: meta.inference_time_ms,
       usage: meta.usage || null,
+      safetyWarning: meta.safety_warning || false,
       time: Date.now(),
     }
     if (activeId.value && activeConv.value) {
@@ -213,7 +214,14 @@ export const useChatStore = defineStore('chat', () => {
         message: text, model: model.value, persona: persona.value,
         depth: depth.value, history: history.value.slice(0, -1),
       })
-      _pushAssistant(data.response, data.thinking, data)
+      if (data.safety_warning) {
+        _pushAssistant(data.response, null, { safetyWarning: true })
+      } else if (data.error) {
+        error.value = data.response || '请求失败'
+        _pushAssistant('请求失败，请稍后重试。', null, {})
+      } else {
+        _pushAssistant(data.response, data.thinking, data)
+      }
     } catch (e) {
       error.value = e.response?.data?.detail || e.message
       _pushAssistant('请求失败，请稍后重试。', null, {})

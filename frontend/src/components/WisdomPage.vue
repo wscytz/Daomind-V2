@@ -20,7 +20,6 @@
         <div class="wisdom-label">每日一签</div>
         <div class="wisdom-source">{{ data.passage.source_name }}<span v-if="data.passage.chapter"> · {{ data.passage.chapter }}</span></div>
         <div class="wisdom-original">{{ data.passage.original }}</div>
-        <div v-if="data.passage.translation" class="wisdom-translation">{{ data.passage.translation }}</div>
         <button class="wisdom-discuss-btn" @click="discuss">
           就此讨论
         </button>

@@ -27,11 +27,13 @@ CLASSIC_ROUTES = {
 
 class RAGService:
     def __init__(self, data_dir: Path, embedding_base_url: str,
-                 embedding_api_key: str, embedding_model: str = "embedding-3"):
+                 embedding_api_key: str, embedding_model: str = "embedding-3",
+                 auth_type: str = "bearer"):
         self.data_dir = data_dir
         self.emb_base_url = embedding_base_url
         self.emb_api_key = embedding_api_key
         self.emb_model = embedding_model
+        self.emb_auth_type = auth_type
         self.providers: Dict[str, BaseNPZRAG] = {}
         self.hybrids: Dict[str, HybridRetriever] = {}
         self._cache = TTLCache(maxsize=1000, ttl=300)
@@ -81,7 +83,7 @@ class RAGService:
         if not self.providers:
             return None
         first = next(iter(self.providers.values()))
-        return first.get_query_embedding(query, self.emb_base_url, self.emb_api_key, self.emb_model)
+        return first.get_query_embedding(query, self.emb_base_url, self.emb_api_key, self.emb_model, self.emb_auth_type)
 
     def search(self, query: str, classic: str = "daodejing", top_k: int = 3) -> Dict:
         cache_key = f"{query}::{classic}::{top_k}"

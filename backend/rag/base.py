@@ -53,13 +53,18 @@ class BaseNPZRAG(ABC):
     def _build_result(self, idx: int, item: Dict, similarity: float) -> Dict: ...
 
     def get_query_embedding(self, query: str, base_url: str, api_key: str,
-                            model: str = "embedding-3") -> Optional[np.ndarray]:
+                            model: str = "embedding-3", auth_type: str = "bearer") -> Optional[np.ndarray]:
         """调 Embedding API（OpenAI 兼容格式）获取查询向量"""
         try:
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                if auth_type == "api-key":
+                    headers["X-API-Key"] = api_key
+                else:
+                    headers["Authorization"] = f"Bearer {api_key}"
             resp = requests.post(
                 f"{base_url}/embeddings",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={"model": model, "input": [query]},
+                headers=headers, json={"model": model, "input": [query]},
                 timeout=30,
             )
             if resp.status_code != 200:
@@ -86,8 +91,8 @@ class BaseNPZRAG(ABC):
         ]
 
     def retrieve(self, query: str, base_url: str, api_key: str,
-                 model: str = "embedding-3", top_k: int = 3) -> List[Dict]:
-        embedding = self.get_query_embedding(query, base_url, api_key, model)
+                 model: str = "embedding-3", auth_type: str = "bearer", top_k: int = 3) -> List[Dict]:
+        embedding = self.get_query_embedding(query, base_url, api_key, model, auth_type)
         if embedding is None:
             return []
         return self.search_with_vector(embedding, top_k)

@@ -145,6 +145,14 @@
               <input class="setting-input" v-model="p.base_url" placeholder="https://..." />
             </div>
             <div class="setting-row">
+              <label class="setting-label">认证方式</label>
+              <select class="model-select" v-model="p.auth_type" style="max-width: 140px">
+                <option value="bearer">Bearer Token</option>
+                <option value="api-key">X-API-Key</option>
+                <option value="none">无认证</option>
+              </select>
+            </div>
+            <div class="setting-row">
               <label class="setting-label">API Key</label>
               <div class="key-row">
                 <input :type="p.showKey ? 'text' : 'password'" class="setting-input"
@@ -293,6 +301,7 @@ async function loadSettings() {
       base_url: p.base_url || '',
       api_key: '',  // 不回填明文 key
       api_key_masked: p.api_key_masked || '',
+      auth_type: p.auth_type || 'bearer',
       showKey: false,
       models: Object.entries(p.models || {}).map(([id, info]) => ({
         id,
@@ -325,7 +334,7 @@ async function refreshHealth() {
         const byProvider = {}
         for (const [id, info] of Object.entries(modelObjs)) {
           const pname = info.provider || '自定义'
-          if (!byProvider[pname]) byProvider[pname] = { name: pname, base_url: '', api_key: '', showKey: false, models: [] }
+          if (!byProvider[pname]) byProvider[pname] = { name: pname, base_url: '', api_key: '', auth_type: 'bearer', showKey: false, models: [] }
           byProvider[pname].models.push({ id, api_model: info.api_model || id, label: info.label || id, tag: info.tag || '' })
         }
         providerForms.value = Object.values(byProvider)
@@ -351,7 +360,7 @@ function toggleTheme() {
 
 function addProvider() {
   providerForms.value.push({
-    name: '', base_url: '', api_key: '', showKey: false,
+    name: '', base_url: '', api_key: '', auth_type: 'bearer', showKey: false,
     models: [{ id: '', api_model: '', label: '', tag: '' }],
   })
 }
@@ -373,7 +382,7 @@ async function handleSave() {
       }
       // 只发送用户实际填写的 key（空串表示未修改）
       const keyToSend = p.api_key || undefined
-      return { name: p.name || '自定义', base_url: p.base_url, api_key: keyToSend, models }
+      return { name: p.name || '自定义', base_url: p.base_url, api_key: keyToSend, auth_type: p.auth_type || 'bearer', models }
     }).filter(p => p.base_url)
 
     const embedding = {
