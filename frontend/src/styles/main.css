@@ -121,20 +121,27 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .sidebar-header {
-  padding: 32px 24px 24px;
+  padding: 24px 20px 20px;
   border-bottom: 1px solid var(--divider);
 }
 
-.brand { display: flex; align-items: baseline; gap: 6px; margin-bottom: 2px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  filter: drop-shadow(0 2px 8px rgba(180,148,60,0.15));
+}
+.brand-text { display: flex; flex-direction: column; gap: 1px; }
 .brand-zh {
   font-family: var(--font-serif);
-  font-size: 22px; font-weight: 700;
+  font-size: 20px; font-weight: 700;
   color: var(--ink);
-  letter-spacing: 8px;
+  letter-spacing: 6px;
 }
 .brand-en {
   font-family: var(--font-sans);
-  font-size: 9px; font-weight: 400;
+  font-size: 8px; font-weight: 400;
   color: var(--cloud);
   letter-spacing: 3px;
 }
@@ -169,12 +176,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   background: rgba(0,0,0,0.025);
 }
 .persona-icon {
-  width: auto; height: auto;
+  width: 32px; height: 32px;
   flex-shrink: 0;
-  font-size: 14px; line-height: 1;
-  display: block;
+  display: flex; align-items: center; justify-content: center;
 }
-.persona-btn.active .persona-icon { color: var(--gold-dim); }
+.persona-icon img {
+  width: 28px; height: 28px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.persona-btn.active .persona-icon img { opacity: 1; }
 
 /* Depth */
 .depth-row { display: flex; gap: 2px; }
@@ -638,12 +649,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   to { opacity: 1; transform: translateY(0); }
 }
 .empty-glyph {
-  font-family: var(--font-serif); font-size: 36px;
-  color: var(--cloud); margin-bottom: 24px;
-  opacity: 0.4;
-  width: auto; height: auto;
-  background: none; border-radius: 0;
+  width: 200px; height: 150px;
+  margin: 0 auto 24px;
+  display: block;
+  opacity: 0.85;
+  mix-blend-mode: multiply;
 }
+[data-theme="dark"] .empty-glyph { opacity: 0.6; mix-blend-mode: screen; }
 .empty-title {
   font-family: var(--font-serif); font-size: 15px;
   font-weight: 400; color: var(--stone);

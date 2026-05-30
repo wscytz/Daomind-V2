@@ -5,10 +5,12 @@
     <aside :class="['sidebar', { open: showSidebar }]" role="complementary" aria-label="侧边栏">
       <div class="sidebar-header">
         <div class="brand">
-          <span class="brand-zh">道心</span>
-          <span class="brand-en">DAO-MIND</span>
+          <img src="/brand-mark.png" alt="道心" class="brand-mark" />
+          <div class="brand-text">
+            <span class="brand-zh">道心</span>
+            <span class="brand-en">DAO-MIND</span>
+          </div>
         </div>
-        <p class="brand-desc">以古人之智，解今人之忧</p>
       </div>
 
       <!-- 对话列表 -->
@@ -58,7 +60,9 @@
               :class="['persona-btn', { active: store.persona === p.value }]"
               @click="store.setPersona(p.value); showSidebar = false"
               :aria-pressed="store.persona === p.value">
-              <span class="persona-icon" aria-hidden="true">{{ p.icon }}</span>
+              <span class="persona-icon" aria-hidden="true">
+                <img :src="`/icon-${p.icon}.png`" :alt="p.label" />
+              </span>
               <div class="persona-text">
                 <span class="persona-name">{{ p.label }}</span>
                 <span class="persona-hint">{{ p.hint }}</span>
@@ -250,9 +254,9 @@ const embeddingForm = ref({ base_url: '', api_key: '', model: 'embedding-3', sho
 
 // 人格定义（= 模式，含 RAG 说明）
 const personas = [
-  { value: 'standard', label: '心理咨询', icon: '☯', hint: '纯对话' },
-  { value: 'baijuyi', label: '诗疗', icon: '诗', hint: '白居易诗集' },
-  { value: 'daoist', label: '道疗', icon: '道', hint: '道德经·庄子·道家疗法' },
+  { value: 'standard', label: '心理咨询', icon: 'standard', hint: '纯对话' },
+  { value: 'baijuyi', label: '诗疗', icon: 'poetry', hint: '白居易诗集' },
+  { value: 'daoist', label: '道疗', icon: 'daoist', hint: '道德经·庄子·道家疗法' },
 ]
 
 const depths = [

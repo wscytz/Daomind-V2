@@ -18,7 +18,7 @@
   <div class="messages-wrap" role="log" aria-label="对话内容" aria-live="polite">
     <div class="messages" ref="msgContainer">
       <div v-if="store.messages.length === 0 && !store.isLoading" class="empty-state">
-        <div class="empty-glyph" aria-hidden="true">道</div>
+        <img src="/empty-state.png" alt="" class="empty-glyph" />
         <div class="empty-title">道法自然，心安即归处</div>
         <div class="empty-sub">以古人之智，解今人之忧</div>
       </div>
