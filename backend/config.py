@@ -84,7 +84,7 @@ PROVIDERS = [
         "name": "智谱 AI",
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
         "api_key": os.getenv("ZHIPU_API_KEY", ""),
-        "auth_type": "bearer",
+        "auth_type": "bearer",  # Authorization: Bearer <key>
         "models": {
             "glm-4-flash": {"api_model": "glm-4-flash", "label": "GLM-4 Flash", "tag": "快速"},
             "glm-4.7":     {"api_model": "glm-4.7", "label": "GLM-4.7", "tag": ""},
@@ -100,19 +100,6 @@ PROVIDERS = [
         "models": {
             "seed":      {"api_model": "doubao-seed-2-0-pro-260215", "label": "Seed Pro", "tag": "推理"},
             "seed-lite": {"api_model": "doubao-seed-2-0-lite-260215", "label": "Seed Lite", "tag": "快速"},
-        },
-    },
-    {
-        "name": "Ollama（本地）",
-        "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
-        "api_key": os.getenv("OLLAMA_API_KEY", "ollama"),
-        "auth_type": os.getenv("OLLAMA_AUTH_TYPE", "none"),
-        "models": {
-            "llama3":   {"api_model": "llama3", "label": "Llama 3", "tag": "本地"},
-            "llama3.1": {"api_model": "llama3.1", "label": "Llama 3.1", "tag": "本地"},
-            "qwen2.5":  {"api_model": "qwen2.5:7b", "label": "Qwen 2.5", "tag": "本地"},
-            "deepseek-r1": {"api_model": "deepseek-r1:7b", "label": "DeepSeek R1", "tag": "推理·本地"},
-            "bge-m3":   {"api_model": "bge-m3", "label": "BGE-M3 (Embedding)", "tag": "本地Embedding"},
         },
     },
 ]
