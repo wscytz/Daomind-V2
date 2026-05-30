@@ -4,6 +4,11 @@
       <div class="loading-dots"><span></span><span></span><span></span></div>
     </div>
 
+    <div v-else-if="error" class="wisdom-error">
+      <div class="wisdom-error-msg">加载失败</div>
+      <button class="wisdom-retry-btn" @click="load">重试</button>
+    </div>
+
     <template v-else-if="data">
       <!-- 节气 -->
       <div class="term-card">
@@ -40,12 +45,15 @@ const emit = defineEmits(['navigate'])
 const store = useChatStore()
 const data = ref(null)
 const loading = ref(true)
+const error = ref(false)
 
 async function load() {
   loading.value = true
+  error.value = false
   try {
     data.value = await getWisdom()
   } catch (e) {
+    error.value = true
     console.warn('智慧卡加载失败:', e)
   } finally {
     loading.value = false

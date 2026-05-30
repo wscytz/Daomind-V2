@@ -40,7 +40,9 @@
       <span v-for="s in message.sources" :key="s" class="source-chip">{{ sourceName(s) }}</span>
     </div>
 
-    <div v-if="message.safetyWarning || message.safety_warning" class="safety-box">{{ message.content }}</div>
+    <div v-if="message.safetyWarning || message.safety_warning" class="safety-box">
+      {{ getSafetyMessage() }}
+    </div>
 
     <div class="msg-footer">
       <span v-if="tokenLabel" class="msg-tokens" :title="tokenTitle">{{ tokenLabel }}</span>
@@ -105,6 +107,10 @@ function fmtTime(ts) {
   if (!ts) return ''
   const d = new Date(ts)
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
+function getSafetyMessage() {
+  return '您的感受很重要，如果您有困扰，建议寻求专业心理帮助。'
 }
 
 async function copy() {

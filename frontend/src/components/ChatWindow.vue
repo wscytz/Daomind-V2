@@ -110,7 +110,9 @@ function handleSend() {
   const text = inputText.value.trim()
   if (!text || store.isLoading) return
   inputText.value = ''
-  store.send(text)
+  store.send(text).catch(e => {
+    console.warn('发送失败:', e)
+  })
 }
 
 watch(() => [store.messages.length, store.streamingText], async () => {

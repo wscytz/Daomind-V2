@@ -3,7 +3,11 @@
 
 from datetime import date, timedelta
 from typing import Optional, Dict, List
+import logging
+
 from config import SOURCE_NAMES
+
+logger = logging.getLogger(__name__)
 
 # 节气区间表：(month, day, 节气名, 关键词, 描述)
 # 按"该节气从这一天开始"排列，覆盖到下一个节气之前
@@ -85,8 +89,8 @@ def get_wisdom_card(rag_service, target_date: Optional[date] = None) -> Dict:
         results.extend(r2.get("results", []))
         r3 = rag_service.search(theme, classic="daoist_therapy", top_k=1)
         results.extend(r3.get("results", []))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"RAG 检索失败: {e}")
 
     if not results:
         return {"term": term, "passage": None}

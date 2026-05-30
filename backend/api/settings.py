@@ -82,9 +82,20 @@ async def save_settings(body: SettingsBody, request: Request):
     models = new_client.available_models()
     logger.info(f"配置已更新 | 可用模型: {list(models.keys())} | RAG: {new_rag.loaded_providers}")
 
+    # 脱敏：只返回前端需要的字段
+    raw = config.get_all_model_choices()
+    safe_models = {}
+    for mid, cfg in raw.items():
+        safe_models[mid] = {
+            "provider": cfg.get("provider", ""),
+            "api_model": cfg.get("api_model", mid),
+            "label": cfg.get("label", mid),
+            "tag": cfg.get("tag", ""),
+        }
+
     return {
         "status": "ok",
-        "models": config.get_all_model_choices(),
+        "models": safe_models,
         "rag_loaded": len(new_rag.loaded_providers),
         "providers": new_rag.loaded_providers,
     }
