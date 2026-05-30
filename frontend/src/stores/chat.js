@@ -20,7 +20,9 @@ async function _encrypt(text) {
   const buf = new Uint8Array(iv.length + new Uint8Array(enc).length)
   buf.set(iv)
   buf.set(new Uint8Array(enc), iv.length)
-  return btoa(String.fromCharCode(...buf))
+  // 分块处理，避免大数据时 String.fromCharCode 栈溢出
+  const encoded = Array.from(buf, b => String.fromCharCode(b)).join('')
+  return btoa(encoded)
 }
 
 async function _decrypt(encrypted) {
@@ -66,7 +68,13 @@ async function saveConversations(convs) {
     const encrypted = await _encrypt(json)
     localStorage.setItem(CONV_KEY, encrypted)
   } catch (e) {
-    console.warn('对话保存失败:', e)
+    // 加密失败降级为明文保存，不丢失数据
+    console.warn('对话加密失败，降级明文保存:', e)
+    try {
+      localStorage.setItem(CONV_KEY, JSON.stringify(convs))
+    } catch {
+      console.error('对话保存完全失败:', e)
+    }
   }
 }
 
@@ -297,10 +305,13 @@ export const useChatStore = defineStore('chat', () => {
   function retryLast() {
     if (!activeConv.value || isLoading.value) return
     const msgs = activeConv.value.messages
-    const lastUser = [...msgs].reverse().find(m => m.role === 'user')
-    if (!lastUser) return
-    // 移除最后的 assistant 消息
-    const updated = msgs.slice(0, -1)
+    // 找到最后一条 assistant 消息，只移除它（避免误删未回复的 user 消息）
+    const lastIdx = [...msgs].reverse().findIndex(m => m.role === 'assistant')
+    if (lastIdx < 0) return
+    const actualIdx = msgs.length - 1 - lastIdx
+    const lastUser = msgs[actualIdx - 1]
+    if (!lastUser || lastUser.role !== 'user') return
+    const updated = [...msgs.slice(0, actualIdx)]
     _updateConv(activeId.value, { messages: updated })
     send(lastUser.content)
   }

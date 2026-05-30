@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 
 import config
-from clients.unified import UnifiedAPIClient
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -59,13 +58,13 @@ async def save_settings(body: SettingsBody, request: Request):
     embedding_data = body.embedding.model_dump()
     config.save_settings(providers_data, embedding_data)
 
-    # 重建 API 客户端
-    new_client = UnifiedAPIClient()
-    request.app.state.api_client = new_client
-
-    # 重建 RAG 服务
-    emb_cfg = config.EMBEDDING_PROVIDER
+    # 先构建所有新对象，全部成功后再统一替换 app.state（原子性）
+    from clients.unified import UnifiedAPIClient
     from rag.service import RAGService
+    from services.counseling import CounselingService
+
+    new_client = UnifiedAPIClient()
+    emb_cfg = config.EMBEDDING_PROVIDER
     new_rag = RAGService(
         config.RAG_DATA_DIR,
         embedding_base_url=emb_cfg["base_url"],
@@ -73,11 +72,12 @@ async def save_settings(body: SettingsBody, request: Request):
         embedding_model=emb_cfg["model"],
         auth_type=emb_cfg.get("auth_type", "bearer"),
     )
-    request.app.state.rag_service = new_rag
+    new_counseling = CounselingService(new_rag, new_client)
 
-    # 重建咨询
-    from services.counseling import CounselingService
-    request.app.state.counseling_service = CounselingService(new_rag, new_client)
+    # 全部成功后再替换
+    request.app.state.api_client = new_client
+    request.app.state.rag_service = new_rag
+    request.app.state.counseling_service = new_counseling
 
     models = new_client.available_models()
     logger.info(f"配置已更新 | 可用模型: {list(models.keys())} | RAG: {new_rag.loaded_providers}")

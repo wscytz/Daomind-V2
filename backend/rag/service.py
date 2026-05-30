@@ -148,15 +148,20 @@ class RAGService:
         return "\n".join(parts)
 
     def search_multi(self, query: str, classics: List[str], top_k: int = 3) -> Dict:
-        """多库综参检索：合并多个经典库的结果"""
+        """多库综合检索：合并多个经典库的结果（embedding 只调一次）"""
         if not classics:
             return {"results": [], "sources": []}
 
+        # 复用 embedding，一次调完
+        query_embedding = self._get_embedding(query)
+        if query_embedding is None:
+            return {"results": [], "error": "Embedding API 调用失败"}
+
         all_results = []
-        per_classic_k = max(top_k, 2)  # 每个库至少取 2 条，合并后再截断
+        per_classic_k = max(top_k, 2)
 
         for classic in classics:
-            r = self.search(query, classic=classic, top_k=per_classic_k)
+            r = self._search_with_embedding(query_embedding, query, classic=classic, top_k=per_classic_k)
             all_results.extend(r.get("results", []))
 
         # 去重（按相似度排序后截断）
@@ -167,3 +172,39 @@ class RAGService:
             "results": all_results,
             "sources": list(set(r.get("source", "") for r in all_results)),
         }
+
+    def _search_with_embedding(self, query_embedding: List[float], query: str, classic: str = "daodejing", top_k: int = 3) -> Dict:
+        """复用已有 embedding 结果的检索（不重复调 API）"""
+        cache_key = f"{query}::{classic}::{top_k}"
+        with self._lock:
+            cached = self._cache.get(cache_key)
+            if cached:
+                return cached
+
+        route = CLASSIC_ROUTES.get(classic, CLASSIC_ROUTES["daodejing"])
+
+        all_results = []
+        for name in route:
+            provider = self.providers.get(name)
+            if not provider or not provider.loaded:
+                continue
+            hybrid = self.hybrids.get(name)
+            if hybrid:
+                results = hybrid.search(
+                    query_embedding, query, top_k=top_k,
+                    build_result_fn=lambda idx, item, sim, p=provider: p._build_result(idx, item, sim),
+                )
+            else:
+                results = provider.search_with_vector(query_embedding, top_k)
+            all_results.extend(results)
+
+        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+        all_results = all_results[:top_k]
+
+        result = {
+            "results": all_results,
+            "sources": list(set(r.get("source", "") for r in all_results)),
+        }
+        with self._lock:
+            self._cache[cache_key] = result
+        return result

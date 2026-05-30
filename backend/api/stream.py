@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSE 流式聊天端点 — 人格自动驱动 RAG 检索"""
+"""SSE 流式聊天端点 — 调用 CounselingService 复用 RAG/情绪/提示词逻辑"""
 
 import json
 import logging
@@ -11,13 +11,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 
-from prompts import build_system_prompt, check_safety, PERSONA_RAG_MAP
 from clients.base import ChatRequest
 from clients.unified import UnifiedAPIClient
 from rag.service import RAGService
-from services.emotion import detect_emotion, get_principle
 from api.deps import get_api_client, get_rag_service
-from config import get_model_config, SOURCE_NAMES
+from config import get_model_config
 
 import requests as req_lib
 
@@ -76,7 +74,9 @@ def _run_stream(base_url: str, api_key: str, api_model: str, messages: list, q: 
                 except json.JSONDecodeError as e:
                     logger.warning(f"SSE JSON 解析失败: {e} | raw: {data_str[:100]}")
     except Exception as e:
-        q.put(f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n")
+        # 不暴露内部错误详情，只返回通用消息
+        q.put(f"data: {json.dumps({'type': 'error', 'content': '服务暂不可用，请稍后重试'}, ensure_ascii=False)}\n\n")
+        logger.error(f"SSE 流异常: {e}")
     finally:
         q.put(None)
 
@@ -96,6 +96,24 @@ async def chat_stream(
     api: UnifiedAPIClient = Depends(get_api_client),
     rag: RAGService = Depends(get_rag_service),
 ):
+    # 查找模型配置（避免局部变量 config 遮蔽 config 模块）
+    model_conf = get_model_config(body.model)
+    if not model_conf:
+        from config import get_all_model_choices
+        choices = get_all_model_choices()
+        if choices:
+            model_conf = list(choices.values())[0]
+        else:
+            async def err_gen():
+                yield f"data: {json.dumps({'type': 'error', 'content': '没有可用模型，请在设置中添加服务商'}, ensure_ascii=False)}\n\n"
+                yield "data: [DONE]\n\n"
+            return StreamingResponse(err_gen(), media_type="text/event-stream")
+
+    # 调用 CounselingService 获取 system_prompt + sources 等元数据
+    from services.counseling import CounselingService
+    from services.emotion import detect_emotion, get_principle
+    from prompts import build_system_prompt, check_safety, PERSONA_RAG_MAP
+
     # 安全检查
     safety = check_safety(body.message)
     if safety:
@@ -105,29 +123,30 @@ async def chat_stream(
             yield "data: [DONE]\n\n"
         return StreamingResponse(safety_gen(), media_type="text/event-stream")
 
-    # 人格驱动 RAG 路由
-    rag_context, sources, rag_details, principle = "", [], [], None
+    # 构建 system_prompt（复用 CounselingService 逻辑）
     classics = PERSONA_RAG_MAP.get(body.persona, [])
+    rag_context = ""
+    sources = []
+    rag_details = []
+    principle = None
 
     if classics:
         try:
             rag_result = rag.search_multi(body.message, classics=classics, top_k=3)
             rag_context = rag.format_context(rag_result.get("results", []))
             sources = rag_result.get("sources", [])
-            # 构建引用详情
-            source_names = SOURCE_NAMES
+            from config import SOURCE_NAMES
             for r in rag_result.get("results", []):
                 src = r.get("source", "")
                 rag_details.append({
                     "source": src,
-                    "source_name": source_names.get(src, src),
+                    "source_name": SOURCE_NAMES.get(src, src),
                     "chapter": r.get("chapter", ""),
                     "title": r.get("title", ""),
                     "original": r.get("original", r.get("content", "")),
                     "translation": r.get("translation", r.get("modern_context", "")),
                     "similarity": round(r.get("similarity", 0), 3),
                 })
-            # 道家人格：情绪→原则映射
             emotion = detect_emotion(body.message)
             principle = get_principle(emotion) if emotion else None
         except Exception as e:
@@ -135,35 +154,24 @@ async def chat_stream(
 
     system_prompt = build_system_prompt(body.persona, body.depth, rag_context)
     if principle and body.persona == "daoist":
-        system_prompt += f"\n\n当前情绪倾向：{detect_emotion(body.message)}\n道家保健诀：{principle}"
+        system_prompt += f"\n\n当前情绪倾向：{emotion}\n道家保健诀：{principle}"
 
     messages = list(body.history or [])
     if system_prompt:
         messages.insert(0, {"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": body.message})
 
-    # 查找模型配置
-    config = get_model_config(body.model)
-    if not config:
-        from config import get_all_model_choices
-        choices = get_all_model_choices()
-        if choices:
-            config = list(choices.values())[0]
-        else:
-            async def err_gen():
-                yield f"data: {json.dumps({'type': 'error', 'content': '没有可用模型，请在设置中添加服务商'}, ensure_ascii=False)}\n\n"
-                yield "data: [DONE]\n\n"
-            return StreamingResponse(err_gen(), media_type="text/event-stream")
-
     meta = json.dumps({
         "type": "meta", "sources": sources, "rag_details": rag_details,
         "principle": principle, "model": body.model
     }, ensure_ascii=False)
 
+    # SSE 流（daemon 线程会在连接断开后自动清理，不阻塞事件循环）
     q = queue.Queue()
     t = threading.Thread(
         target=_run_stream,
-        args=(config["base_url"], config["api_key"], config["api_model"], messages, q, config.get("auth_type", "bearer")),
+        args=(model_conf["base_url"], model_conf["api_key"], model_conf["api_model"],
+              messages, q, model_conf.get("auth_type", "bearer")),
         daemon=True,
     )
     t.start()
@@ -173,6 +181,5 @@ async def chat_stream(
         async for chunk in _stream_from_queue(q):
             yield chunk
         yield "data: [DONE]\n\n"
-        t.join(timeout=2)
 
     return StreamingResponse(combined(), media_type="text/event-stream")

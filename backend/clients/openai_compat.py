@@ -37,7 +37,7 @@ class OpenAICompatClient(BaseAPIClient):
             "messages": messages,
             "max_tokens": request.max_tokens or 4096,
         }
-        if request.temperature:
+        if request.temperature is not None:
             payload["temperature"] = request.temperature
 
         headers = {
