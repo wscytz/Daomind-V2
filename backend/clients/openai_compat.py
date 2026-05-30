@@ -29,6 +29,12 @@ class OpenAICompatClient(BaseAPIClient):
         self.auth_type = auth_type
         self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="openai_compat_")
 
+    def close(self):
+        self._executor.shutdown(wait=False)
+
+    def __del__(self):
+        self.close()
+
     async def chat(self, request: ChatRequest) -> ChatResponse:
         messages = self.build_messages(request)
 

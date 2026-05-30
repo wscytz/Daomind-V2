@@ -50,7 +50,11 @@ if not _env_file.exists():
 load_dotenv(_env_file)
 
 HOST = os.getenv("HOST", "127.0.0.1")
-PORT = int(os.getenv("PORT", "8001"))
+try:
+    _port = int(os.getenv("PORT", "8001"))
+    PORT = max(1, min(65535, _port))  # clamp to valid range
+except (ValueError, TypeError):
+    PORT = 8001
 _CORS_ENV = os.getenv("CORS_ORIGINS", "")
 if _CORS_ENV == "*":
     CORS_ORIGINS = ["*"]
@@ -181,25 +185,26 @@ def save_settings(providers_data: list, embedding_data: dict):
             "auth_type": p.get("auth_type", "bearer"),
             "models": p["models"],
         })
-    # 写文件时 key 做混淆
-    file_providers = []
-    for p in new_providers:
-        file_providers.append({
-            "name": p["name"],
-            "base_url": p["base_url"],
-            "api_key": _encrypt_key(p["api_key"]),
-            "auth_type": p["auth_type"],
-            "models": p["models"],
-        })
-    emb_key = embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", "")
-    payload = {"providers": file_providers, "embedding": {
-        "base_url": embedding_data.get("base_url", EMBEDDING_PROVIDER["base_url"]),
-        "api_key": _encrypt_key(emb_key),
-        "model": embedding_data.get("model", EMBEDDING_PROVIDER["model"]),
-    }}
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
     with _config_lock:
+        # 写文件在锁内，避免并发写入导致文件损坏
+        file_providers = []
+        for p in new_providers:
+            file_providers.append({
+                "name": p["name"],
+                "base_url": p["base_url"],
+                "api_key": _encrypt_key(p["api_key"]),
+                "auth_type": p["auth_type"],
+                "models": p["models"],
+            })
+        emb_key = embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", "")
+        payload = {"providers": file_providers, "embedding": {
+            "base_url": embedding_data.get("base_url", EMBEDDING_PROVIDER["base_url"]),
+            "api_key": _encrypt_key(emb_key),
+            "model": embedding_data.get("model", EMBEDDING_PROVIDER["model"]),
+        }}
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+
         PROVIDERS.clear()
         PROVIDERS.extend(new_providers)
         EMBEDDING_PROVIDER["base_url"] = payload["embedding"]["base_url"]

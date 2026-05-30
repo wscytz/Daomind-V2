@@ -352,9 +352,9 @@ async function refreshHealth() {
   }
 }
 
-function openSettings() {
+async function openSettings() {
   saveMsg.value = ''
-  loadSettings()
+  await loadSettings()
   showSettings.value = true
 }
 

@@ -85,8 +85,7 @@
 import { ref, nextTick, watch, onMounted } from 'vue'
 import { useChatStore } from '../stores/chat'
 import MessageBubble from './MessageBubble.vue'
-import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { renderMd } from '../utils/markdown'
 
 const store = useChatStore()
 const inputText = ref('')
@@ -103,8 +102,6 @@ function acceptDisclaimer() {
   localStorage.setItem('daomind-disclaimer-accepted', '1')
   showDisclaimer.value = false
 }
-
-function renderMd(text) { return DOMPurify.sanitize(marked(text)) }
 
 function handleSend() {
   const text = inputText.value.trim()
