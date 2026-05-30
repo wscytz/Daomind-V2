@@ -27,6 +27,11 @@ export async function saveSettings({ providers, embedding }) {
   return data
 }
 
+export async function fetchModels({ base_url, api_key, auth_type }) {
+  const { data } = await api.post('/settings/fetch-models', { base_url, api_key, auth_type })
+  return data
+}
+
 /**
  * SSE 流式对话
  */

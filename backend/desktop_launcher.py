@@ -59,4 +59,4 @@ if __name__ == "__main__":
     )
 
     # 启动窗口（阻塞直到窗口关闭）
-    webview.start(debug=False)
+    webview.start(debug=False, http_server=False)

@@ -55,6 +55,9 @@ async def lifespan(app: FastAPI):
     models = api_client.available_models()
     logger.info(f"启动完成 | RAG providers: {rag.loaded_providers} | 可用模型: {list(models.keys())}")
     yield
+    # 关闭 httpx 客户端连接
+    for client in api_client._clients.values():
+        await client.close()
     logger.info("关闭服务")
 
 

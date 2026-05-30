@@ -4,7 +4,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, List
+from typing import Dict, Optional, List
 
 
 @dataclass
@@ -32,23 +32,12 @@ class ChatResponse:
 
 
 class BaseAPIClient(ABC):
-    SUPPORTED_MODELS: Dict[str, Dict[str, Any]] = {}
-
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
     async def chat(self, request: ChatRequest) -> ChatResponse: ...
-
-    def get_model_config(self, model: str) -> Optional[Dict[str, Any]]:
-        m = model.lower()
-        if m in self.SUPPORTED_MODELS:
-            return self.SUPPORTED_MODELS[m]
-        for key in self.SUPPORTED_MODELS:
-            if key in m or m in key:
-                return self.SUPPORTED_MODELS[key]
-        return None
 
     def build_messages(self, request: ChatRequest) -> List[Dict[str, str]]:
         messages = list(request.history)

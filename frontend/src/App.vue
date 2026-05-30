@@ -5,7 +5,6 @@
     <aside :class="['sidebar', { open: showSidebar }]" role="complementary" aria-label="侧边栏">
       <div class="sidebar-header">
         <div class="brand">
-          <img src="/brand-mark.png" alt="道心" class="brand-mark" />
           <div class="brand-text">
             <span class="brand-zh">道心</span>
             <span class="brand-en">DAO-MIND</span>
@@ -60,9 +59,6 @@
               :class="['persona-btn', { active: store.persona === p.value }]"
               @click="store.setPersona(p.value); showSidebar = false"
               :aria-pressed="store.persona === p.value">
-              <span class="persona-icon" aria-hidden="true">
-                <img :src="`/icon-${p.icon}.png`" :alt="p.label" />
-              </span>
               <div class="persona-text">
                 <span class="persona-name">{{ p.label }}</span>
                 <span class="persona-hint">{{ p.hint }}</span>
@@ -178,7 +174,12 @@
                   <input class="model-tag-input" v-model="m.tag" placeholder="标签" />
                   <button class="model-del-btn" @click="p.models.splice(mi, 1)">&times;</button>
                 </div>
-                <button class="model-add-btn" @click="p.models.push({ id: '', api_model: '', label: '', tag: '' })">+ 添加模型</button>
+                <div class="model-actions">
+                  <button class="model-add-btn" @click="p.models.push({ id: '', api_model: '', label: '', tag: '' })">+ 手动添加</button>
+                  <button class="model-fetch-btn" @click="handleFetchModels(pi)" :disabled="p.fetching || !p.base_url || !p.api_key">
+                    {{ p.fetching ? '拉取中...' : '自动拉取' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -229,7 +230,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useChatStore } from './stores/chat'
-import { checkHealth, getSettings, saveSettings } from './api'
+import { checkHealth, getSettings, saveSettings, fetchModels } from './api'
 import ChatWindow from './components/ChatWindow.vue'
 import WisdomPage from './components/WisdomPage.vue'
 
@@ -254,9 +255,9 @@ const embeddingForm = ref({ base_url: '', api_key: '', model: 'embedding-3', sho
 
 // 人格定义（= 模式，含 RAG 说明）
 const personas = [
-  { value: 'standard', label: '心理咨询', icon: 'standard', hint: '纯对话' },
-  { value: 'baijuyi', label: '诗疗', icon: 'poetry', hint: '白居易诗集' },
-  { value: 'daoist', label: '道疗', icon: 'daoist', hint: '道德经·庄子·道家疗法' },
+  { value: 'standard', label: '心理咨询', hint: '纯对话' },
+  { value: 'baijuyi', label: '诗疗', hint: '白居易诗集' },
+  { value: 'daoist', label: '道疗', hint: '道德经·庄子·道家疗法' },
 ]
 
 const depths = [
@@ -309,6 +310,7 @@ async function loadSettings() {
       api_key_masked: p.api_key_masked || '',
       auth_type: p.auth_type || 'bearer',
       showKey: false,
+      fetching: false,
       models: Object.entries(p.models || {}).map(([id, info]) => ({
         id,
         api_model: typeof info === 'string' ? info : (info.api_model || id),
@@ -366,9 +368,49 @@ function toggleTheme() {
 
 function addProvider() {
   providerForms.value.push({
-    name: '', base_url: '', api_key: '', auth_type: 'bearer', showKey: false,
+    name: '', base_url: '', api_key: '', auth_type: 'bearer', showKey: false, fetching: false,
     models: [{ id: '', api_model: '', label: '', tag: '' }],
   })
+}
+
+async function handleFetchModels(pi) {
+  const p = providerForms.value[pi]
+  if (!p.base_url || !p.api_key) return
+  p.fetching = true
+  try {
+    const result = await fetchModels({ base_url: p.base_url, api_key: p.api_key, auth_type: p.auth_type })
+    if (result.error) {
+      saveOk.value = false
+      saveMsg.value = '拉取失败: ' + result.error
+      return
+    }
+    if (!result.models || result.models.length === 0) {
+      saveOk.value = false
+      saveMsg.value = '未找到可用模型'
+      return
+    }
+    // 已有的 model id 集合（避免重复）
+    const existing = new Set(p.models.map(m => m.id))
+    let added = 0
+    for (const m of result.models) {
+      if (existing.has(m.id)) continue
+      p.models.push({
+        id: m.id,
+        api_model: m.id,
+        label: m.name || m.id,
+        tag: '',
+      })
+      existing.add(m.id)
+      added++
+    }
+    saveOk.value = true
+    saveMsg.value = `拉取到 ${result.models.length} 个模型，新增 ${added} 个`
+  } catch (e) {
+    saveOk.value = false
+    saveMsg.value = '拉取失败: ' + (e.response?.data?.detail || e.message)
+  } finally {
+    p.fetching = false
+  }
 }
 
 async function handleSave() {

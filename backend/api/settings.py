@@ -6,6 +6,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 
+import httpx
 import config
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,44 @@ class SettingsBody(BaseModel):
 @router.get("/settings")
 async def get_settings():
     return config.get_settings_snapshot()
+
+
+class FetchModelsBody(BaseModel):
+    base_url: str
+    api_key: str
+    auth_type: str = "bearer"
+
+
+@router.post("/settings/fetch-models")
+async def fetch_models(body: FetchModelsBody):
+    """根据 base_url + api_key 自动拉取可用模型列表"""
+    headers = {"Content-Type": "application/json"}
+    if body.api_key:
+        if body.auth_type in ("bearer", ""):
+            headers["Authorization"] = f"Bearer {body.api_key}"
+        elif body.auth_type == "api-key":
+            headers["X-API-Key"] = body.api_key
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(f"{body.base_url.rstrip('/')}/models", headers=headers)
+        if resp.status_code != 200:
+            return {"models": [], "error": f"API 返回 {resp.status_code}"}
+
+        data = resp.json().get("data", [])
+        models = []
+        for m in data:
+            mid = m.get("id", "")
+            if not mid:
+                continue
+            models.append({
+                "id": mid,
+                "name": m.get("name", mid),
+                "owned_by": m.get("owned_by", ""),
+            })
+        return {"models": models}
+    except Exception as e:
+        return {"models": [], "error": str(e)}
 
 
 @router.post("/settings")

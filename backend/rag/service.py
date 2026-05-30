@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """统一 RAG 服务 — 无 SDK 依赖，Embedding 走 HTTP"""
 
+import hashlib
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -85,8 +86,11 @@ class RAGService:
         first = next(iter(self.providers.values()))
         return first.get_query_embedding(query, self.emb_base_url, self.emb_api_key, self.emb_model, self.emb_auth_type)
 
+    def _cache_key(self, query: str, classic: str, top_k: int) -> str:
+        return f"{hashlib.md5(query.encode()).hexdigest()[:12]}::{classic}::{top_k}"
+
     def search(self, query: str, classic: str = "daodejing", top_k: int = 3) -> Dict:
-        cache_key = f"{query}::{classic}::{top_k}"
+        cache_key = self._cache_key(query, classic, top_k)
         with self._lock:
             cached = self._cache.get(cache_key)
             if cached:
@@ -175,7 +179,7 @@ class RAGService:
 
     def _search_with_embedding(self, query_embedding: List[float], query: str, classic: str = "daodejing", top_k: int = 3) -> Dict:
         """复用已有 embedding 结果的检索（不重复调 API）"""
-        cache_key = f"{query}::{classic}::{top_k}"
+        cache_key = self._cache_key(query, classic, top_k)
         with self._lock:
             cached = self._cache.get(cache_key)
             if cached:

@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Optional
 
-import requests
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +62,11 @@ class BaseNPZRAG(ABC):
                     headers["X-API-Key"] = api_key
                 else:
                     headers["Authorization"] = f"Bearer {api_key}"
-            resp = requests.post(
-                f"{base_url}/embeddings",
-                headers=headers, json={"model": model, "input": [query]},
-                timeout=30,
-            )
+            with httpx.Client(timeout=30) as client:
+                resp = client.post(
+                    f"{base_url}/embeddings",
+                    headers=headers, json={"model": model, "input": [query]},
+                )
             if resp.status_code != 200:
                 logger.error(f"[{self.provider_name}] Embedding API {resp.status_code}: {resp.text[:200]}")
                 return None
@@ -89,10 +89,3 @@ class BaseNPZRAG(ABC):
             self._build_result(idx, self.data[idx], float(similarities[idx]))
             for idx in top_indices
         ]
-
-    def retrieve(self, query: str, base_url: str, api_key: str,
-                 model: str = "embedding-3", auth_type: str = "bearer", top_k: int = 3) -> List[Dict]:
-        embedding = self.get_query_embedding(query, base_url, api_key, model, auth_type)
-        if embedding is None:
-            return []
-        return self.search_with_vector(embedding, top_k)

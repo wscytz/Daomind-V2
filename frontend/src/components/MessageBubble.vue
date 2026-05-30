@@ -75,10 +75,7 @@ const avatarLabel = computed(() => {
   return '道心'
 })
 
-const renderedContent = computed(() => {
-  if (!props.message.content) return ''
-  return DOMPurify.sanitize(marked(props.message.content))
-})
+const renderedContent = computed(() => renderMd(props.message.content))
 
 const tokenLabel = computed(() => {
   const u = props.message.usage

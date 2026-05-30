@@ -8,15 +8,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-def _encrypt_key(key: str) -> str:
-    """简单混淆：base64 编码（非密码学安全，防肉眼直接读取）"""
+def _encode_key(key: str) -> str:
+    """Base64 编码（防肉眼直接读取，非密码学安全）"""
     if not key:
         return ""
     return base64.b64encode(key.encode("utf-8")).decode("ascii")
 
 
-def _decrypt_key(enc: str) -> str:
-    """解混淆"""
+def _decode_key(enc: str) -> str:
+    """Base64 解码"""
     if not enc:
         return ""
     try:
@@ -137,7 +137,7 @@ def _load_settings_file():
                         PROVIDERS.append({
                             "name": p.get("name", "自定义"),
                             "base_url": p["base_url"],
-                            "api_key": _decrypt_key(p.get("api_key", "")),
+                            "api_key": _decode_key(p.get("api_key", "")),
                             "auth_type": p.get("auth_type", "bearer"),
                             "models": p["models"],
                         })
@@ -146,7 +146,7 @@ def _load_settings_file():
                 if emb.get("base_url"):
                     EMBEDDING_PROVIDER["base_url"] = emb["base_url"]
                 if emb.get("api_key"):
-                    EMBEDDING_PROVIDER["api_key"] = _decrypt_key(emb["api_key"])
+                    EMBEDDING_PROVIDER["api_key"] = _decode_key(emb["api_key"])
                 if emb.get("model"):
                     EMBEDDING_PROVIDER["model"] = emb["model"]
 
@@ -192,14 +192,14 @@ def save_settings(providers_data: list, embedding_data: dict):
             file_providers.append({
                 "name": p["name"],
                 "base_url": p["base_url"],
-                "api_key": _encrypt_key(p["api_key"]),
+                "api_key": _encode_key(p["api_key"]),
                 "auth_type": p["auth_type"],
                 "models": p["models"],
             })
         emb_key = embedding_data.get("api_key") or EMBEDDING_PROVIDER.get("api_key", "")
         payload = {"providers": file_providers, "embedding": {
             "base_url": embedding_data.get("base_url", EMBEDDING_PROVIDER["base_url"]),
-            "api_key": _encrypt_key(emb_key),
+            "api_key": _encode_key(emb_key),
             "model": embedding_data.get("model", EMBEDDING_PROVIDER["model"]),
         }}
         with open(SETTINGS_FILE, "w", encoding="utf-8") as f:

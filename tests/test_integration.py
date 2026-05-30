@@ -141,3 +141,48 @@ class TestPersonaRAGIntegration:
         assert emotion == "焦虑"
         principle = get_principle(emotion)
         assert principle == "少私寡欲，知足知止"
+
+
+class TestCounselingPrepare:
+    """测试 CounselingService.prepare() 方法"""
+
+    def _make_service(self):
+        from services.counseling import CounselingService
+        from rag.service import RAGService
+        from clients.unified import UnifiedAPIClient
+        from config import RAG_DATA_DIR, EMBEDDING_PROVIDER
+        rag = RAGService(
+            RAG_DATA_DIR,
+            embedding_base_url=EMBEDDING_PROVIDER["base_url"],
+            embedding_api_key=EMBEDDING_PROVIDER["api_key"],
+            embedding_model=EMBEDDING_PROVIDER["model"],
+        )
+        return CounselingService(rag, UnifiedAPIClient())
+
+    def test_safety_trigger(self):
+        import asyncio
+        svc = self._make_service()
+        result = asyncio.run(svc.prepare("我不想活了", "standard", "standard"))
+        assert result["safety_warning"] is True
+        assert "400-161-9995" in result["safety_text"]
+        assert result["system_prompt"] == ""
+
+    def test_normal_returns_prompt(self):
+        import asyncio
+        svc = self._make_service()
+        result = asyncio.run(svc.prepare("最近压力大", "standard", "standard"))
+        assert result["safety_warning"] is False
+        assert "道心" in result["system_prompt"]
+        assert result["sources"] == []  # standard 不触发 RAG
+
+    def test_daoist_with_rag(self):
+        import asyncio
+        svc = self._make_service()
+        if not svc.rag.providers:
+            return  # 无 embedding API 跳过
+        result = asyncio.run(svc.prepare("我很焦虑", "daoist", "deep"))
+        assert result["safety_warning"] is False
+        assert "道" in result["system_prompt"]
+        # daoist 应触发情绪检测
+        assert result["emotion"] == "焦虑"
+        assert result["principle"] is not None

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """二十四节气服务 — 区间覆盖计算，任何日期都有对应节气"""
 
-from datetime import date, timedelta
-from typing import Optional, Dict, List
+from datetime import date
+from typing import Optional, Dict
 import logging
 
 from config import SOURCE_NAMES

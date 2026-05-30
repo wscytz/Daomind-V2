@@ -26,3 +26,4 @@ async def health(request: Request):
         "providers": rag.loaded_providers,
         "models": models,
     }
+# reload trigger

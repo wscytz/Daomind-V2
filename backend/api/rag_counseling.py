@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """POST /api/rag/counseling — RAG 增强咨询（人格驱动知识库）"""
 
-import logging
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict
@@ -9,7 +8,6 @@ from typing import Optional, List, Dict
 from api.deps import get_counseling_service
 from services.counseling import CounselingService
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
 
 

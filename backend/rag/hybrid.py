@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 """BM25 + 向量混合检索（RRF 融合）"""
 
-import logging
 import re
 from collections import Counter
 from typing import Dict, List, Tuple
 
 import numpy as np
-
-logger = logging.getLogger(__name__)
 
 
 def tokenize_chinese(text: str) -> List[str]:

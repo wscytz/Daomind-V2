@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-"""OpenAI 兼容客户端 — 适配任何 OpenAI API 格式的服务"""
+"""OpenAI 兼容客户端 — 适配任何 OpenAI API 格式的服务（httpx 异步版）"""
 
 import time
-import json
-import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Dict, List
-import requests as req
+from typing import Optional, Dict
+
+import httpx
 
 from .base import BaseAPIClient, ChatRequest, ChatResponse
 
@@ -16,29 +14,33 @@ logger = logging.getLogger(__name__)
 
 class OpenAICompatClient(BaseAPIClient):
     """
-    通用 OpenAI 兼容客户端
+    通用 OpenAI 兼容客户端（异步）
     支持: DeepSeek, 月之暗面, 阿里通义, 本地 Ollama/vLLM, 任何 OpenAI 格式 API
     """
-    # 不预设模型列表，由用户自定义
-    SUPPORTED_MODELS = {}
 
     def __init__(self, api_key: str, base_url: str, timeout: int = 120, auth_type: str = "bearer"):
         super().__init__(api_key)
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
         self.auth_type = auth_type
-        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="openai_compat_")
+        self._client = httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=10))
 
-    def close(self):
-        self._executor.shutdown(wait=False)
+    async def close(self):
+        await self._client.aclose()
 
-    def __del__(self):
-        self.close()
+    def _build_headers(self) -> Dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            if self.auth_type in ("bearer", ""):
+                headers["Authorization"] = f"Bearer {self.api_key}"
+            elif self.auth_type == "api-key":
+                headers["X-API-Key"] = self.api_key
+        return headers
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         messages = self.build_messages(request)
 
-        payload = {
+        payload: Dict = {
             "model": request.model,
             "messages": messages,
             "max_tokens": request.max_tokens or 4096,
@@ -46,32 +48,13 @@ class OpenAICompatClient(BaseAPIClient):
         if request.temperature is not None:
             payload["temperature"] = request.temperature
 
-        headers = {
-            "Content-Type": "application/json",
-        }
-        if self.api_key:
-            if self.auth_type == "bearer" or not self.auth_type:
-                headers["Authorization"] = f"Bearer {self.api_key}"
-            elif self.auth_type == "api-key":
-                headers["X-API-Key"] = self.api_key
-            # auth_type == "none" 时不加任何认证头
-
         start = time.time()
         try:
-            loop = asyncio.get_running_loop()
-            resp = await asyncio.wait_for(
-                loop.run_in_executor(
-                    self._executor,
-                    lambda: req.post(
-                        f"{self.base_url}/chat/completions",
-                        headers=headers,
-                        json=payload,
-                        timeout=self.timeout,
-                    )
-                ),
-                timeout=self.timeout + 5,
+            resp = await self._client.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._build_headers(),
+                json=payload,
             )
-
             ms = int((time.time() - start) * 1000)
 
             if resp.status_code != 200:
@@ -100,8 +83,48 @@ class OpenAICompatClient(BaseAPIClient):
                 usage=usage,
             )
 
-        except asyncio.TimeoutError:
+        except httpx.TimeoutException:
             return ChatResponse(success=False, error="请求超时", inference_time_ms=int((time.time() - start) * 1000))
         except Exception as e:
             logger.error(f"OpenAI兼容客户端调用失败: {e}")
             return ChatResponse(success=False, error=str(e), inference_time_ms=int((time.time() - start) * 1000))
+
+    async def stream_chat(self, messages: list, model: str, payload_extra: Optional[Dict] = None):
+        """SSE 流式聊天，yield 每一行 SSE data"""
+        payload: Dict = {"model": model, "messages": messages, "stream": True}
+        if payload_extra:
+            payload.update(payload_extra)
+
+        async with self._client.stream(
+            "POST",
+            f"{self.base_url}/chat/completions",
+            headers=self._build_headers(),
+            json=payload,
+        ) as resp:
+            if resp.status_code != 200:
+                body = await resp.aread()
+                yield {"type": "error", "content": f"API {resp.status_code}: {body.decode()[:200]}"}
+                return
+            async for line in resp.aiter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    return
+                import json
+                try:
+                    data = json.loads(data_str)
+                    choices = data.get("choices", [])
+                    if choices:
+                        delta = choices[0].get("delta", {})
+                        content = delta.get("content", "")
+                        reasoning = delta.get("reasoning_content") or delta.get("thinking", "")
+                        if reasoning:
+                            yield {"type": "thinking", "content": reasoning}
+                        if content:
+                            yield {"type": "content", "content": content}
+                    usage = data.get("usage")
+                    if usage:
+                        yield {"type": "usage", "content": usage}
+                except Exception as e:
+                    logger.warning(f"SSE JSON 解析失败: {e} | raw: {data_str[:100]}")

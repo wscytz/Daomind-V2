@@ -20,9 +20,13 @@ async function _encrypt(text) {
   const buf = new Uint8Array(iv.length + new Uint8Array(enc).length)
   buf.set(iv)
   buf.set(new Uint8Array(enc), iv.length)
-  // 分块处理，避免大数据时 String.fromCharCode 栈溢出
-  const encoded = Array.from(buf, b => String.fromCharCode(b)).join('')
-  return btoa(encoded)
+  // 分块转换，避免超长对话时栈溢出
+  let bin = ''
+  const chunk = 8192
+  for (let i = 0; i < buf.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, buf.subarray(i, Math.min(i + chunk, buf.length)))
+  }
+  return btoa(bin)
 }
 
 async function _decrypt(encrypted) {

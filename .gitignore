@@ -29,6 +29,7 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+daomind.log
 backend/build/
 backend/dist/
 dist/
