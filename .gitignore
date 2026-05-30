@@ -1,6 +1,7 @@
 # 环境配置（含 API Key）
 .env
 settings.json
+default-settings.json
 
 # Python
 __pycache__/
@@ -10,6 +11,7 @@ __pycache__/
 dist/
 build/
 *.spec
+!backend/DaoMind.spec
 .venv/
 venv/
 

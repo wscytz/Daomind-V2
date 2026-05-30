@@ -41,6 +41,7 @@ def _get_user_dir() -> Path:
 
 _base = _get_base_dir()
 _user = _get_user_dir()
+_backend_dir = Path(__file__).parent  # backend/ 目录（打包后指向 exe 同级目录）
 
 # .env 加载
 _env_file = _user / ".env"
@@ -113,13 +114,17 @@ EMBEDDING_PROVIDER = {
 
 
 def _load_settings_file():
-    """从 settings.json 加载用户保存的配置（key 解混淆），完全替换 PROVIDERS"""
+    """加载配置：优先用打包目录内置 settings（如有），否则用用户目录。
+    这样 exe 发版时内置 demo key，打包前不发 settings.json 则用 .env 默认。"""
     global PROVIDERS, EMBEDDING_PROVIDER
-    if not SETTINGS_FILE.exists():
-        return
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
+    # 开发时 backend/default-settings.json，打包后 backend/settings.json（spec 映射后的名字）
+    bundled = _backend_dir / "default-settings.json"
+    if not bundled.exists():
+        bundled = _backend_dir / "settings.json"
+
+    def _apply(data):
+        if not data or not isinstance(data, dict):
+            return
         with _config_lock:
             if "providers" in data and isinstance(data["providers"], list):
                 PROVIDERS.clear()
@@ -140,9 +145,24 @@ def _load_settings_file():
                     EMBEDDING_PROVIDER["api_key"] = _decrypt_key(emb["api_key"])
                 if emb.get("model"):
                     EMBEDDING_PROVIDER["model"] = emb["model"]
-    except Exception as e:
-        logger = logging.getLogger(__name__)
-        logger.warning(f"加载 settings.json 失败: {e}，使用 .env 默认配置")
+
+    # 1. 打包目录内置配置（exe 发版时随包）
+    if bundled.exists():
+        try:
+            with open(bundled, "r", encoding="utf-8") as f:
+                _apply(json.load(f))
+            return
+        except Exception:
+            pass  # 损坏则继续往下走
+
+    # 2. 用户目录配置（开发者/自定义）
+    if SETTINGS_FILE.exists():
+        try:
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                _apply(json.load(f))
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"加载 settings.json 失败: {e}，使用默认配置")
 
 
 def save_settings(providers_data: list, embedding_data: dict):
