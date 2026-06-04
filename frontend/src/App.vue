@@ -95,7 +95,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <button class="btn-footer" @click="handleExport" :disabled="!store.messages.length"
+        <button v-if="canExportConversations" class="btn-footer" @click="handleExport" :disabled="!store.messages.length"
           title="导出 Markdown" aria-label="导出对话">导出</button>
         <button class="btn-footer" @click="openSettings" aria-label="设置">设置</button>
         <button class="btn-footer danger" @click="store.clearChat()" :disabled="!store.messages.length"
@@ -216,6 +216,14 @@
             <span class="status-text">{{ healthOk ? '服务正常' : '未连接' }}</span>
             <span v-if="ragCount" class="status-text dim">| RAG {{ ragCount }} 库</span>
           </div>
+          <div class="provider-section">
+            <div class="provider-section-title">本机数据</div>
+            <div class="setting-row">
+              <label class="setting-label">对话记录</label>
+              <button class="model-fetch-btn" @click="handleClearLocalConversations"
+                :disabled="!store.conversations.length">清除本机对话记录</button>
+            </div>
+          </div>
           <div class="about-block">
             <div class="about-title">Dao-Mind · 道心</div>
             <div class="about-author">作者：{{ about.author }} · {{ about.alias }}</div>
@@ -250,6 +258,7 @@ const ragCount = ref(0)
 const saving = ref(false)
 const saveMsg = ref('')
 const saveOk = ref(true)
+const canExportConversations = false
 const about = ref({
   author: '金许诺',
   alias: 'jxn/wscytz',
@@ -521,6 +530,15 @@ function handleExport() {
   a.download = `${store.activeConv?.title || '对话'}.md`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+function handleClearLocalConversations() {
+  if (!store.conversations.length) return
+  const ok = window.confirm('确定清除本机保存的全部对话记录？此操作不会影响 API 设置。')
+  if (!ok) return
+  store.clearAllConversations()
+  saveOk.value = true
+  saveMsg.value = '已清除本机对话记录'
 }
 
 onMounted(() => {

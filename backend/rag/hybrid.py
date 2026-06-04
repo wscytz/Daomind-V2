@@ -98,5 +98,12 @@ class HybridRetriever:
         ranked = sorted(fused.items(), key=lambda x: x[1], reverse=True)[:top_k]
 
         if build_result_fn:
-            return [build_result_fn(doc_id, self.data[doc_id], vector_scores.get(doc_id, 0)) for doc_id, _ in ranked]
+            results = []
+            for doc_id, score in ranked:
+                result = build_result_fn(doc_id, self.data[doc_id], vector_scores.get(doc_id, 0))
+                result["score"] = score
+                if doc_id in keyword_scores:
+                    result["keyword_score"] = keyword_scores[doc_id]
+                results.append(result)
+            return results
         return [{"id": doc_id, "score": score, "source": "hybrid"} for doc_id, score in ranked]

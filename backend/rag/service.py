@@ -21,7 +21,8 @@ CLASSIC_ROUTES = {
     "daodejing": ["daodejing", "daoist_therapy"],
     "lunyu": ["lunyu", "daoist_therapy"],
     "zhuangzi": ["zhuangzi", "daoist_therapy"],
-    "baijuyi": ["baijuyi", "baijuyi_outer", "daoist_therapy"],
+    "baijuyi": ["baijuyi"],
+    "baijuyi_outer": ["baijuyi_outer"],
     "daoist_therapy": ["daoist_therapy"],
 }
 
@@ -79,6 +80,40 @@ class RAGService:
         tags = item.get("scene_tags", []) + item.get("emotion_tags", [])
         return " ".join(p for p in parts if p) + " " + " ".join(tags)
 
+    @staticmethod
+    def _is_usable_result(result: Dict) -> bool:
+        """过滤明显脏的检索结果，避免截断诗句在前端反复曝光。"""
+        if result.get("source") not in ("poem", "poem_outer"):
+            return True
+
+        content = (result.get("content") or result.get("original") or "").strip()
+        if not content:
+            return False
+
+        # 外圈诗库有少量截断/低质样本，如《逢旧》末尾残留单字“知”。
+        if content.endswith(("知", "。知", "，知")):
+            return False
+
+        return True
+
+    @staticmethod
+    def _rank_score(result: Dict) -> float:
+        score = result.get("score")
+        if score is None:
+            score = result.get("similarity", 0)
+
+        # 外圈低质量诗仍可作为兜底，但不应压过核心诗库和高质量外圈诗。
+        if result.get("source") == "poem_outer" and result.get("quality_level") == "low":
+            score *= 0.72
+
+        return score
+
+    @staticmethod
+    def _filter_and_rank_results(results: List[Dict], top_k: int) -> List[Dict]:
+        filtered = [r for r in results if RAGService._is_usable_result(r)]
+        filtered.sort(key=RAGService._rank_score, reverse=True)
+        return filtered[:top_k]
+
     def _get_embedding(self, query: str):
         """调一次 Embedding API，返回向量"""
         if not self.providers:
@@ -109,15 +144,14 @@ class RAGService:
             hybrid = self.hybrids.get(name)
             if hybrid:
                 results = hybrid.search(
-                    query_embedding, query, top_k=top_k,
+                    query_embedding, query, top_k=top_k * 4,
                     build_result_fn=lambda idx, item, sim, p=provider: p._build_result(idx, item, sim),
                 )
             else:
-                results = provider.search_with_vector(query_embedding, top_k)
+                results = provider.search_with_vector(query_embedding, top_k * 4)
             all_results.extend(results)
 
-        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
-        all_results = all_results[:top_k]
+        all_results = self._filter_and_rank_results(all_results, top_k)
 
         result = {
             "results": all_results,
@@ -162,15 +196,14 @@ class RAGService:
             return {"results": [], "error": "Embedding API 调用失败"}
 
         all_results = []
-        per_classic_k = max(top_k, 2)
+        per_classic_k = max(top_k * 4, 8)
 
         for classic in classics:
             r = self._search_with_embedding(query_embedding, query, classic=classic, top_k=per_classic_k)
             all_results.extend(r.get("results", []))
 
-        # 去重（按相似度排序后截断）
-        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
-        all_results = all_results[:top_k]
+        # 过滤脏样本并按相似度截断
+        all_results = self._filter_and_rank_results(all_results, top_k)
 
         return {
             "results": all_results,
@@ -195,15 +228,14 @@ class RAGService:
             hybrid = self.hybrids.get(name)
             if hybrid:
                 results = hybrid.search(
-                    query_embedding, query, top_k=top_k,
+                    query_embedding, query, top_k=top_k * 4,
                     build_result_fn=lambda idx, item, sim, p=provider: p._build_result(idx, item, sim),
                 )
             else:
-                results = provider.search_with_vector(query_embedding, top_k)
+                results = provider.search_with_vector(query_embedding, top_k * 4)
             all_results.extend(results)
 
-        all_results.sort(key=lambda x: x.get("similarity", 0), reverse=True)
-        all_results = all_results[:top_k]
+        all_results = self._filter_and_rank_results(all_results, top_k)
 
         result = {
             "results": all_results,

@@ -5,7 +5,7 @@ a = Analysis(
     ['desktop_launcher.py'],
     pathex=[],
     binaries=[],
-    datas=[('../frontend/dist', 'frontend/dist'), ('../data/rag_databases', 'data/rag_databases'), ('default-settings.json', 'settings.json')],
+    datas=[('C:\\daomind\\frontend\\dist', 'frontend\\dist'), ('C:\\daomind\\data\\rag_databases', 'data\\rag_databases')],
     hiddenimports=['uvicorn', 'uvicorn.logging', 'uvicorn.lifespan.on', 'fastapi', 'pydantic', 'numpy', 'cachetools', 'webview', 'webview.platforms.edgechromium'],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,4 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='app.ico',
 )

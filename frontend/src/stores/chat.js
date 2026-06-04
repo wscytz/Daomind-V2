@@ -5,6 +5,8 @@ import { sendMessage, streamChat } from '../api'
 const CONV_KEY = 'daomind-conversations'
 const ACTIVE_KEY = 'daomind-active-id'
 const PREFS_KEY = 'daomind-prefs'
+const PERSIST_CONVERSATIONS = true
+const ALLOW_CONVERSATION_EXPORT = false
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -39,6 +41,10 @@ async function _decrypt(encrypted) {
 }
 
 function loadConversations() {
+  if (!PERSIST_CONVERSATIONS) {
+    clearPersistedConversations()
+    return []
+  }
   try {
     const raw = localStorage.getItem(CONV_KEY)
     return raw ? JSON.parse(raw) : []
@@ -49,6 +55,10 @@ function loadConversations() {
 }
 
 async function loadConversationsAsync() {
+  if (!PERSIST_CONVERSATIONS) {
+    clearPersistedConversations()
+    return []
+  }
   try {
     const raw = localStorage.getItem(CONV_KEY)
     if (!raw) return []
@@ -67,6 +77,7 @@ async function loadConversationsAsync() {
 }
 
 async function saveConversations(convs) {
+  if (!PERSIST_CONVERSATIONS) return
   try {
     const json = JSON.stringify(convs)
     const encrypted = await _encrypt(json)
@@ -80,6 +91,13 @@ async function saveConversations(convs) {
       console.error('对话保存完全失败:', e)
     }
   }
+}
+
+function clearPersistedConversations() {
+  try {
+    localStorage.removeItem(CONV_KEY)
+    localStorage.removeItem(ACTIVE_KEY)
+  } catch { /* ignore */ }
 }
 
 function loadPrefs() {
@@ -98,12 +116,17 @@ function savePrefs(prefs) {
 export const useChatStore = defineStore('chat', () => {
   // 对话列表（先用同步加载占位，异步解密后替换）
   const conversations = ref(loadConversations())
-  const activeId = ref(localStorage.getItem(ACTIVE_KEY) || null)
+  const activeId = ref(PERSIST_CONVERSATIONS ? (localStorage.getItem(ACTIVE_KEY) || null) : null)
 
   // 异步解密并替换（兼容旧版明文数据）
   loadConversationsAsync().then(decs => {
     if (decs.length > 0) {
       conversations.value = decs
+      if (!activeId.value || !decs.find(c => c.id === activeId.value)) {
+        activeId.value = decs[0].id
+      }
+    } else if (activeId.value && !conversations.value.find(c => c.id === activeId.value)) {
+      activeId.value = null
     }
   })
 
@@ -139,7 +162,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function _persist() {
     saveConversations(conversations.value)
-    if (activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
+    if (PERSIST_CONVERSATIONS && activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
   }
 
   function _updateConv(id, patch) {
@@ -175,7 +198,7 @@ export const useChatStore = defineStore('chat', () => {
     activeId.value = id
     error.value = null
     streamingText.value = ''
-    localStorage.setItem(ACTIVE_KEY, id)
+    if (PERSIST_CONVERSATIONS) localStorage.setItem(ACTIVE_KEY, id)
   }
 
   function deleteConversation(id) {
@@ -195,6 +218,20 @@ export const useChatStore = defineStore('chat', () => {
       _updateConv(activeId.value, { messages: [] })
     }
     error.value = null
+  }
+
+  function clearAllConversations() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+    if (abortStream) {
+      abortStream()
+      abortStream = null
+    }
+    conversations.value = []
+    activeId.value = null
+    error.value = null
+    streamingText.value = ''
+    isLoading.value = false
+    clearPersistedConversations()
   }
 
   function searchConversations(query) {
@@ -344,6 +381,7 @@ export const useChatStore = defineStore('chat', () => {
 
   // ── 导出 Markdown ──
   function exportMarkdown() {
+    if (!ALLOW_CONVERSATION_EXPORT) return null
     if (!activeConv.value || !messages.value.length) return null
     const conv = activeConv.value
     const title = conv.title
@@ -377,7 +415,7 @@ export const useChatStore = defineStore('chat', () => {
   return {
     messages, conversations, activeId, persona, depth, model,
     isLoading, error, history, streamingText,
-    send, clearChat, stopStream, retryLast, exportMarkdown,
+    send, clearChat, clearAllConversations, stopStream, retryLast, exportMarkdown,
     newConversation, switchConversation, deleteConversation,
     renameConversation, searchConversations,
     setPersona, setDepth, setModel,

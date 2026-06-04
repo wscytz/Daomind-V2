@@ -144,6 +144,7 @@ class BaijuyiProvider(BaseNPZRAG):
             "wisdom": item.get("usage_example", ""),
             "modern_interpretation": item.get("modern_interpretation", ""),
             "translation": item.get("translation", ""),
+            "quality_level": item.get("quality_level", ""),
         }
 
 
@@ -179,4 +180,5 @@ class BaijuyiOuterProvider(BaseNPZRAG):
             "theme": ", ".join(item.get("scenes", [])),
             "emotion_tags": item.get("emotions", []),
             "translation": item.get("translation", ""),
+            "quality_level": item.get("quality_level", ""),
         }

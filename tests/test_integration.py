@@ -35,6 +35,32 @@ class TestSolarTerm:
 
 
 class TestRAGSearch:
+    def test_baijuyi_routes_are_poem_only(self):
+        from rag.service import CLASSIC_ROUTES
+
+        assert CLASSIC_ROUTES["baijuyi"] == ["baijuyi"]
+        assert CLASSIC_ROUTES["baijuyi_outer"] == ["baijuyi_outer"]
+
+    def test_dirty_baijuyi_outer_result_filtered(self):
+        from rag.service import RAGService
+
+        dirty = {
+            "source": "poem_outer",
+            "title": "逢旧",
+            "content": "久别偶相逢，俱疑是梦中。即今欢乐事，放醆又成空。知",
+            "quality_level": "low",
+            "similarity": 0.99,
+        }
+        clean = {
+            "source": "poem_outer",
+            "title": "问刘十九",
+            "content": "绿蚁新醅酒，红泥小火炉。晚来天欲雪，能饮一杯无。",
+            "quality_level": "high",
+            "similarity": 0.8,
+        }
+
+        assert RAGService._filter_and_rank_results([dirty, clean], 3) == [clean]
+
     def test_daodejing_search_clean(self):
         """确认道德经检索结果不再包含脏标签"""
         from rag.service import RAGService
