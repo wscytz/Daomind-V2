@@ -101,6 +101,7 @@
         <button class="btn-footer danger" @click="store.clearChat()" :disabled="!store.messages.length"
           aria-label="清空当前对话">清空</button>
       </div>
+      <div class="signature">金许诺 · jxn/wscytz</div>
     </aside>
 
     <main class="chat-area" role="main">
@@ -215,6 +216,11 @@
             <span class="status-text">{{ healthOk ? '服务正常' : '未连接' }}</span>
             <span v-if="ragCount" class="status-text dim">| RAG {{ ragCount }} 库</span>
           </div>
+          <div class="about-block">
+            <div class="about-title">Dao-Mind · 道心</div>
+            <div class="about-author">作者：{{ about.author }} · {{ about.alias }}</div>
+            <div class="about-copy">{{ about.copyright }}</div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-modal" @click="showSettings = false">取消</button>
@@ -230,7 +236,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useChatStore } from './stores/chat'
-import { checkHealth, getSettings, saveSettings, fetchModels } from './api'
+import { checkHealth, getSettings, saveSettings, fetchModels, getAbout } from './api'
 import ChatWindow from './components/ChatWindow.vue'
 import WisdomPage from './components/WisdomPage.vue'
 
@@ -244,6 +250,11 @@ const ragCount = ref(0)
 const saving = ref(false)
 const saveMsg = ref('')
 const saveOk = ref(true)
+const about = ref({
+  author: '金许诺',
+  alias: 'jxn/wscytz',
+  copyright: 'Copyright (c) 2026 金许诺 (jxn/wscytz)',
+})
 
 const renamingId = ref(null)
 const renameValue = ref('')
@@ -351,6 +362,14 @@ async function refreshHealth() {
   } catch (e) {
     console.warn('健康检查失败:', e)
     healthOk.value = false
+  }
+}
+
+async function loadAbout() {
+  try {
+    about.value = { ...about.value, ...(await getAbout()) }
+  } catch (e) {
+    console.warn('加载关于信息失败:', e)
   }
 }
 
@@ -504,5 +523,8 @@ function handleExport() {
   URL.revokeObjectURL(url)
 }
 
-onMounted(refreshHealth)
+onMounted(() => {
+  refreshHealth()
+  loadAbout()
+})
 </script>

@@ -17,6 +17,11 @@ export async function getWisdom() {
   return data
 }
 
+export async function getAbout() {
+  const { data } = await api.get('/about')
+  return data
+}
+
 export async function getSettings() {
   const { data } = await api.get('/settings')
   return data
@@ -43,6 +48,7 @@ export function streamChat({
   const body = { message, model, persona, depth, history }
 
   const controller = new AbortController()
+  let receivedContent = false
 
   fetch('/api/chat/stream', {
     method: 'POST',
@@ -52,7 +58,7 @@ export function streamChat({
   })
     .then(async (resp) => {
       if (!resp.ok) {
-        onError && onError(`HTTP ${resp.status}`)
+        onError && onError(`HTTP ${resp.status}`, { receivedContent })
         return
       }
       const reader = resp.body.getReader()
@@ -76,7 +82,10 @@ export function streamChat({
           }
           try {
             const parsed = JSON.parse(data)
-            if (parsed.type === 'content') onToken && onToken(parsed.content)
+            if (parsed.type === 'content') {
+              receivedContent = receivedContent || !!parsed.content
+              onToken && onToken(parsed.content)
+            }
             else if (parsed.type === 'thinking') onThinking && onThinking(parsed.content)
             else if (parsed.type === 'meta') onMeta && onMeta(parsed)
             else if (parsed.type === 'usage') onUsage && onUsage(parsed.content)
@@ -85,10 +94,10 @@ export function streamChat({
           }
         }
       }
-      onDone && onDone()
+      onError && onError('连接中断', { receivedContent })
     })
     .catch((e) => {
-      if (e.name !== 'AbortError') onError && onError(e.message)
+      if (e.name !== 'AbortError') onError && onError(e.message, { receivedContent })
     })
 
   return () => controller.abort()

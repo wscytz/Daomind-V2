@@ -3,6 +3,7 @@
 
 import os
 import sys
+import tempfile
 import pytest
 
 # 确保 backend 在 sys.path 中
@@ -12,6 +13,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 os.environ.setdefault("ZHIPU_API_KEY", "test-zhipu-key")
 os.environ.setdefault("DOUBAO_API_KEY", "test-doubao-key")
 os.environ.setdefault("EMBEDDING_API_KEY", "test-embedding-key")
+os.environ.setdefault(
+    "DAOMIND_SETTINGS_FILE",
+    os.path.join(tempfile.gettempdir(), "daomind-test-settings.json"),
+)
 
 
 @pytest.fixture(scope="session")

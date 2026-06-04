@@ -256,8 +256,17 @@ export const useChatStore = defineStore('chat', () => {
         isLoading.value = false
         abortStream = null
       },
-      onError: () => {
-        _fallbackSend(text)
+      onError: (msg, info = {}) => {
+        if (fullText || info.receivedContent) {
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null }
+          _pushAssistant(fullText || streamingText.value || '（连接中断，未收到完整回复）', thinkingText, meta)
+          error.value = msg || '连接中断，已保留当前回复。'
+          streamingText.value = ''
+          isLoading.value = false
+          abortStream = null
+        } else {
+          _fallbackSend(text)
+        }
       },
     })
   }

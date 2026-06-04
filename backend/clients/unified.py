@@ -21,6 +21,10 @@ class UnifiedAPIClient:
     def __init__(self):
         self._clients: Dict[str, OpenAICompatClient] = {}
 
+    async def close(self):
+        for client in self._clients.values():
+            await client.close()
+
     def _get_client(self, base_url: str, api_key: str, auth_type: str = "bearer") -> OpenAICompatClient:
         cache_key = f"{base_url}:{_key_hash(api_key)}:{auth_type}"
         if cache_key not in self._clients:

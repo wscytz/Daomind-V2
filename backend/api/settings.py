@@ -114,9 +114,15 @@ async def save_settings(body: SettingsBody, request: Request):
     new_counseling = CounselingService(new_rag, new_client)
 
     # 全部成功后再替换
+    old_client = getattr(request.app.state, "api_client", None)
     request.app.state.api_client = new_client
     request.app.state.rag_service = new_rag
     request.app.state.counseling_service = new_counseling
+    if old_client and hasattr(old_client, "close"):
+        try:
+            await old_client.close()
+        except Exception as e:
+            logger.warning(f"关闭旧 API 客户端失败: {e}")
 
     models = new_client.available_models()
     logger.info(f"配置已更新 | 可用模型: {list(models.keys())} | RAG: {new_rag.loaded_providers}")

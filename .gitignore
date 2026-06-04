@@ -33,3 +33,6 @@ daomind.log
 backend/build/
 backend/dist/
 dist/
+
+# 本地 v2 工作目录（独立 git 仓库，不并入主仓）
+Daomind-V2/

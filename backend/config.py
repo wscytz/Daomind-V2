@@ -64,7 +64,8 @@ else:
     CORS_ORIGINS = ["http://localhost:8001", "http://127.0.0.1:8001", "http://localhost:5173"]
 _RAG_RAW = os.getenv("RAG_DATA_DIR", "")
 RAG_DATA_DIR = Path(_RAG_RAW) if _RAG_RAW else _base / "data" / "rag_databases"
-SETTINGS_FILE = _user / "settings.json"
+_SETTINGS_FILE_RAW = os.getenv("DAOMIND_SETTINGS_FILE", "")
+SETTINGS_FILE = Path(_SETTINGS_FILE_RAW) if _SETTINGS_FILE_RAW else _user / "settings.json"
 FRONTEND_DIR = _base / "frontend" / "dist"
 
 # 源名称映射（单一事实来源）
