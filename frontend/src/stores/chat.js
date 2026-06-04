@@ -28,6 +28,10 @@ function localUpdatedAt() {
   return Number.isFinite(value) ? value : 0
 }
 
+function isPlainJsonConversations(raw) {
+  return raw.trim().startsWith('[')
+}
+
 // ── AES-GCM 加解密（Web Crypto API，防同机脚本直接读明文） ──
 const ENC_KEY = new TextEncoder().encode('daomind-local-enc-key-32bytes!')
 
@@ -63,6 +67,7 @@ function loadConversations() {
   }
   try {
     const raw = localStorage.getItem(CONV_KEY)
+    if (raw && !isPlainJsonConversations(raw)) return []
     return raw ? JSON.parse(raw) : []
   } catch (e) {
     console.warn('对话加载失败:', e)
@@ -98,18 +103,25 @@ async function loadConversationsAsync() {
     try {
       const decrypted = await _decrypt(raw)
       return JSON.parse(decrypted)
-    } catch {
-      // 解密失败说明是旧版明文，直接当 JSON 解析（兼容迁移）
+    } catch (decryptError) {
+      // 只有明显是旧版明文 JSON 时才兼容解析，避免把损坏密文误当空记录。
+      if (!isPlainJsonConversations(raw)) {
+        throw decryptError
+      }
       return JSON.parse(raw)
     }
   } catch (e) {
     console.warn('对话加载失败:', e)
-    return []
+    throw e
   }
 }
 
-async function saveConversations(convs) {
+async function saveConversations(convs, persistPausedRef = null) {
   if (!PERSIST_CONVERSATIONS) return
+  if (persistPausedRef?.value) {
+    console.warn('对话记录加载异常，已暂停覆盖保存。')
+    return
+  }
   try {
     const json = JSON.stringify(convs)
     const encrypted = await _encrypt(json)
@@ -158,6 +170,19 @@ export const useChatStore = defineStore('chat', () => {
   // 对话列表（先用同步加载占位，异步解密后替换）
   const conversations = ref(loadConversations())
   const activeId = ref(PERSIST_CONVERSATIONS ? (localStorage.getItem(ACTIVE_KEY) || null) : null)
+  const persistencePaused = ref(false)
+  const persistenceReady = ref(false)
+
+  // 当前偏好
+  const prefs = loadPrefs()
+  const persona = ref(prefs.persona || 'standard')
+  const depth = ref(prefs.depth || 'standard')
+  const model = ref(prefs.model || 'glm-4-flash')
+
+  // UI 状态
+  const isLoading = ref(false)
+  const error = ref(null)
+  const streamingText = ref('')
 
   // 异步解密并替换（兼容旧版明文数据）
   loadConversationsAsync().then(decs => {
@@ -173,18 +198,12 @@ export const useChatStore = defineStore('chat', () => {
     } else if (activeId.value && !conversations.value.find(c => c.id === activeId.value)) {
       activeId.value = null
     }
+  }).catch(() => {
+    persistencePaused.value = true
+    error.value = '本机对话记录读取失败，已暂停自动覆盖保存。建议先备份本机数据文件后再清理。'
+  }).finally(() => {
+    persistenceReady.value = true
   })
-
-  // 当前偏好
-  const prefs = loadPrefs()
-  const persona = ref(prefs.persona || 'standard')
-  const depth = ref(prefs.depth || 'standard')
-  const model = ref(prefs.model || 'glm-4-flash')
-
-  // UI 状态
-  const isLoading = ref(false)
-  const error = ref(null)
-  const streamingText = ref('')
 
   // 当前对话消息
   const activeConv = computed(() =>
@@ -210,7 +229,7 @@ export const useChatStore = defineStore('chat', () => {
       if (activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
       else localStorage.removeItem(ACTIVE_KEY)
     }
-    saveConversations(conversations.value)
+    saveConversations(conversations.value, persistencePaused)
   }
 
   function _updateConv(id, patch) {
@@ -279,6 +298,8 @@ export const useChatStore = defineStore('chat', () => {
     error.value = null
     streamingText.value = ''
     isLoading.value = false
+    persistencePaused.value = false
+    persistenceReady.value = true
     clearPersistedConversations()
   }
 
@@ -293,6 +314,14 @@ export const useChatStore = defineStore('chat', () => {
   // ── 发送消息 ──
   async function send(text) {
     if (!text.trim() || isLoading.value) return
+    if (!persistenceReady.value) {
+      error.value = '本机对话记录正在加载，请稍后再发送。'
+      return
+    }
+    if (persistencePaused.value) {
+      error.value = '本机对话记录读取失败，已暂停发送以避免覆盖历史。请先清除或备份记录。'
+      return
+    }
     error.value = null
     streamingText.value = ''
     streamBuffer = ''

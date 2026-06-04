@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
 import config
@@ -39,9 +39,9 @@ def _read_payload() -> dict:
         with open(path, "r", encoding="utf-8") as f:
             payload = json.load(f)
     except Exception:
-        return {"data": "", "active_id": None}
+        raise HTTPException(status_code=503, detail="conversation backup is unreadable")
     if not isinstance(payload, dict):
-        return {"data": "", "active_id": None}
+        raise HTTPException(status_code=503, detail="conversation backup is invalid")
     return {
         "data": payload.get("data", "") if isinstance(payload.get("data", ""), str) else "",
         "active_id": payload.get("active_id"),
