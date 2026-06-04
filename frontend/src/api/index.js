@@ -37,6 +37,21 @@ export async function fetchModels({ base_url, api_key, auth_type }) {
   return data
 }
 
+export async function getConversationBackup() {
+  const { data } = await api.get('/conversations')
+  return data
+}
+
+export async function saveConversationBackup({ data: conversationsData, active_id }) {
+  const { data } = await api.post('/conversations', { data: conversationsData, active_id })
+  return data
+}
+
+export async function clearConversationBackup() {
+  const { data } = await api.delete('/conversations')
+  return data
+}
+
 /**
  * SSE 流式对话
  */

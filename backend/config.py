@@ -39,8 +39,21 @@ def _get_user_dir() -> Path:
     return _get_base_dir()
 
 
+def _get_app_data_dir() -> Path:
+    """当前用户的数据目录，用于不应随 exe 分发的运行时数据。"""
+    if sys.platform == "win32":
+        root = os.getenv("LOCALAPPDATA") or os.getenv("APPDATA")
+        base = Path(root) if root else Path.home() / "AppData" / "Local"
+        return base / "DaoMind"
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "DaoMind"
+    return Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "DaoMind"
+
+
 _base = _get_base_dir()
 _user = _get_user_dir()
+_app_data = _get_app_data_dir()
+_app_data.mkdir(parents=True, exist_ok=True)
 _backend_dir = Path(__file__).parent  # backend/ 目录（打包后指向 exe 同级目录）
 
 # .env 加载
@@ -66,6 +79,8 @@ _RAG_RAW = os.getenv("RAG_DATA_DIR", "")
 RAG_DATA_DIR = Path(_RAG_RAW) if _RAG_RAW else _base / "data" / "rag_databases"
 _SETTINGS_FILE_RAW = os.getenv("DAOMIND_SETTINGS_FILE", "")
 SETTINGS_FILE = Path(_SETTINGS_FILE_RAW) if _SETTINGS_FILE_RAW else _user / "settings.json"
+_CONVERSATIONS_FILE_RAW = os.getenv("DAOMIND_CONVERSATIONS_FILE", "")
+CONVERSATIONS_FILE = Path(_CONVERSATIONS_FILE_RAW) if _CONVERSATIONS_FILE_RAW else _app_data / "conversations.json"
 FRONTEND_DIR = _base / "frontend" / "dist"
 
 # 源名称映射（单一事实来源）

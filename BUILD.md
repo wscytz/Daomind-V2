@@ -80,3 +80,10 @@ pytest tests/ -v
 - 新增云商只需在 `config.py` 的 PROVIDERS 列表加一条
 - NPZ 双格式兼容（`data` 键 + `embedding_texts` 键）
 - 支持 PyInstaller 打包后的 `sys._MEIPASS` 路径
+
+## 后续记录
+
+- PyInstaller `--onefile` 启动时会解包到 `_MEIxxxxx` 临时目录，这是正常运行机制；该目录仅用于读取内置前端资源和 RAG 数据。
+- 当前 `settings.json` 与 `daomind.log` 写在 exe 同级目录，适合便携版和内测分发。
+- 对话记录不会写进 exe，也不会放在 exe 同级目录；现在由前端 localStorage + 用户数据目录备份共同保存，Windows 默认在 `%LOCALAPPDATA%/DaoMind/conversations.json`，macOS 默认在 `~/Library/Application Support/DaoMind/conversations.json`。
+- 产品化或安装到 `Program Files` 等受限目录时，建议迁移运行数据到用户目录，例如 `%APPDATA%/DaoMind` 或 `%LOCALAPPDATA%/DaoMind`，避免无写权限导致配置或日志写入失败。

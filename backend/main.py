@@ -19,6 +19,7 @@ from api.stream import router as stream_router
 from api.settings import router as settings_router
 from api.wisdom import router as wisdom_router
 from api.about import router as about_router
+from api.conversations import router as conversations_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
@@ -72,6 +73,7 @@ app.include_router(stream_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
 app.include_router(wisdom_router, prefix="/api")
 app.include_router(about_router, prefix="/api")
+app.include_router(conversations_router, prefix="/api")
 
 # 静态文件（生产模式）
 frontend_dist = config.FRONTEND_DIR

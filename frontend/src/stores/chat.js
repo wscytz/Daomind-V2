@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { sendMessage, streamChat } from '../api'
+import {
+  clearConversationBackup,
+  getConversationBackup,
+  saveConversationBackup,
+  sendMessage,
+  streamChat,
+} from '../api'
 
 const CONV_KEY = 'daomind-conversations'
 const ACTIVE_KEY = 'daomind-active-id'
@@ -60,7 +66,15 @@ async function loadConversationsAsync() {
     return []
   }
   try {
-    const raw = localStorage.getItem(CONV_KEY)
+    let raw = localStorage.getItem(CONV_KEY)
+    if (!raw) {
+      const backup = await getConversationBackup()
+      if (backup?.data) {
+        raw = backup.data
+        localStorage.setItem(CONV_KEY, raw)
+        if (backup.active_id) localStorage.setItem(ACTIVE_KEY, backup.active_id)
+      }
+    }
     if (!raw) return []
     // 先尝试解密（新格式）
     try {
@@ -82,11 +96,14 @@ async function saveConversations(convs) {
     const json = JSON.stringify(convs)
     const encrypted = await _encrypt(json)
     localStorage.setItem(CONV_KEY, encrypted)
+    saveConversationBackup({ data: encrypted, active_id: localStorage.getItem(ACTIVE_KEY) || null }).catch(() => {})
   } catch (e) {
     // 加密失败降级为明文保存，不丢失数据
     console.warn('对话加密失败，降级明文保存:', e)
     try {
-      localStorage.setItem(CONV_KEY, JSON.stringify(convs))
+      const plain = JSON.stringify(convs)
+      localStorage.setItem(CONV_KEY, plain)
+      saveConversationBackup({ data: plain, active_id: localStorage.getItem(ACTIVE_KEY) || null }).catch(() => {})
     } catch {
       console.error('对话保存完全失败:', e)
     }
@@ -97,6 +114,7 @@ function clearPersistedConversations() {
   try {
     localStorage.removeItem(CONV_KEY)
     localStorage.removeItem(ACTIVE_KEY)
+    clearConversationBackup().catch(() => {})
   } catch { /* ignore */ }
 }
 
@@ -122,6 +140,10 @@ export const useChatStore = defineStore('chat', () => {
   loadConversationsAsync().then(decs => {
     if (decs.length > 0) {
       conversations.value = decs
+      const storedActiveId = PERSIST_CONVERSATIONS ? localStorage.getItem(ACTIVE_KEY) : null
+      if (!activeId.value && storedActiveId) {
+        activeId.value = storedActiveId
+      }
       if (!activeId.value || !decs.find(c => c.id === activeId.value)) {
         activeId.value = decs[0].id
       }
@@ -161,8 +183,11 @@ export const useChatStore = defineStore('chat', () => {
   let rafId = null
 
   function _persist() {
+    if (PERSIST_CONVERSATIONS) {
+      if (activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
+      else localStorage.removeItem(ACTIVE_KEY)
+    }
     saveConversations(conversations.value)
-    if (PERSIST_CONVERSATIONS && activeId.value) localStorage.setItem(ACTIVE_KEY, activeId.value)
   }
 
   function _updateConv(id, patch) {
