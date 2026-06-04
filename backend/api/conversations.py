@@ -11,16 +11,24 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 import config
 
 router = APIRouter()
+MAX_BACKUP_BYTES = 10 * 1024 * 1024
 
 
 class ConversationBackup(BaseModel):
     data: str = ""
     active_id: Optional[str] = None
+
+    @field_validator("data")
+    @classmethod
+    def limit_data_size(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > MAX_BACKUP_BYTES:
+            raise ValueError("conversation backup is too large")
+        return value
 
 
 def _read_payload() -> dict:
@@ -68,8 +76,5 @@ async def save_conversations(body: ConversationBackup):
 
 @router.delete("/conversations")
 async def clear_conversations():
-    try:
-        config.CONVERSATIONS_FILE.unlink(missing_ok=True)
-    except Exception:
-        _write_payload({"data": "", "active_id": None, "updated_at": time.time()})
+    _write_payload({"data": "", "active_id": None, "updated_at": time.time()})
     return {"status": "ok"}

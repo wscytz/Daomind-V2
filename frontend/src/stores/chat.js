@@ -10,12 +10,22 @@ import {
 
 const CONV_KEY = 'daomind-conversations'
 const ACTIVE_KEY = 'daomind-active-id'
+const CONV_UPDATED_KEY = 'daomind-conversations-updated'
 const PREFS_KEY = 'daomind-prefs'
 const PERSIST_CONVERSATIONS = true
 const ALLOW_CONVERSATION_EXPORT = false
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+}
+
+function nowSeconds() {
+  return Date.now() / 1000
+}
+
+function localUpdatedAt() {
+  const value = Number(localStorage.getItem(CONV_UPDATED_KEY) || 0)
+  return Number.isFinite(value) ? value : 0
 }
 
 // ── AES-GCM 加解密（Web Crypto API，防同机脚本直接读明文） ──
@@ -67,12 +77,20 @@ async function loadConversationsAsync() {
   }
   try {
     let raw = localStorage.getItem(CONV_KEY)
-    if (!raw) {
-      const backup = await getConversationBackup()
+    const localUpdated = localUpdatedAt()
+    const backup = await getConversationBackup()
+    const backupUpdated = Number(backup?.updated_at || 0)
+    if (backupUpdated > localUpdated) {
+      localStorage.setItem(CONV_UPDATED_KEY, String(backupUpdated))
       if (backup?.data) {
         raw = backup.data
         localStorage.setItem(CONV_KEY, raw)
         if (backup.active_id) localStorage.setItem(ACTIVE_KEY, backup.active_id)
+        else localStorage.removeItem(ACTIVE_KEY)
+      } else {
+        raw = null
+        localStorage.removeItem(CONV_KEY)
+        localStorage.removeItem(ACTIVE_KEY)
       }
     }
     if (!raw) return []
@@ -95,14 +113,18 @@ async function saveConversations(convs) {
   try {
     const json = JSON.stringify(convs)
     const encrypted = await _encrypt(json)
+    const updatedAt = nowSeconds()
     localStorage.setItem(CONV_KEY, encrypted)
+    localStorage.setItem(CONV_UPDATED_KEY, String(updatedAt))
     saveConversationBackup({ data: encrypted, active_id: localStorage.getItem(ACTIVE_KEY) || null }).catch(() => {})
   } catch (e) {
     // 加密失败降级为明文保存，不丢失数据
     console.warn('对话加密失败，降级明文保存:', e)
     try {
       const plain = JSON.stringify(convs)
+      const updatedAt = nowSeconds()
       localStorage.setItem(CONV_KEY, plain)
+      localStorage.setItem(CONV_UPDATED_KEY, String(updatedAt))
       saveConversationBackup({ data: plain, active_id: localStorage.getItem(ACTIVE_KEY) || null }).catch(() => {})
     } catch {
       console.error('对话保存完全失败:', e)
@@ -112,6 +134,7 @@ async function saveConversations(convs) {
 
 function clearPersistedConversations() {
   try {
+    localStorage.setItem(CONV_UPDATED_KEY, String(nowSeconds()))
     localStorage.removeItem(CONV_KEY)
     localStorage.removeItem(ACTIVE_KEY)
     clearConversationBackup().catch(() => {})
